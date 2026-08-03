@@ -37,6 +37,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
+    // Mail
+    implementation("org.springframework.boot:spring-boot-starter-mail")
+
     // JPA
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 
@@ -110,7 +113,12 @@ tasks.withType<Test> {
     outputs.dir(snippetsDir)
 }
 
+val cleanGeneratedSnippets by tasks.registering(Delete::class) {
+    delete(snippetsDir)
+}
+
 tasks.test {
+    dependsOn(cleanGeneratedSnippets)
     systemProperty("org.springframework.restdocs.outputDir", snippetsDir.absolutePath)
 }
 
