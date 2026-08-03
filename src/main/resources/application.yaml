@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: pangyeori
+
+  config:
+    import: optional:file:.env.${spring.profiles.active}[.properties]
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?serverTimezone=UTC&characterEncoding=UTF-8
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: ${JPA_FORMAT_SQL:true}
+    show-sql: ${JPA_SHOW_SQL:false}
+    open-in-view: false
+
+  flyway:
+    enabled: ${FLYWAY_ENABLED:false}
+    locations: classpath:db/migration
