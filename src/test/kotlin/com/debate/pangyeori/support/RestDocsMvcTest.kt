@@ -35,7 +35,9 @@ abstract class RestDocsMvcTest {
     protected lateinit var mockMvc: MockMvc
 
     @BeforeEach
-    fun setUpMockMvc(provider: RestDocumentationContextProvider) {
+    fun setUpMockMvc(
+        provider: RestDocumentationContextProvider,
+    ) {
         mockMvc = MockMvcBuilders
             .webAppContextSetup(context)
             .apply<DefaultMockMvcBuilder>(
