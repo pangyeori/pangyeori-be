@@ -4,6 +4,7 @@ import com.debate.pangyeori.common.dto.ApiError
 import com.debate.pangyeori.common.dto.ApiError.FieldError
 import com.debate.pangyeori.common.dto.ApiResponse
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -38,6 +39,19 @@ class GlobalExceptionHandler {
             code = ErrorCode.INVALID_INPUT.name,
             message = ErrorCode.INVALID_INPUT.message,
             details = details,
+        )
+        return ResponseEntity
+            .badRequest()
+            .body(ApiResponse.fail(error))
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleHttpMessageNotReadableException(
+        e: HttpMessageNotReadableException,
+    ): ResponseEntity<ApiResponse<Nothing>> {
+        val error = ApiError(
+            code = ErrorCode.INVALID_INPUT.name,
+            message = ErrorCode.INVALID_INPUT.message,
         )
         return ResponseEntity
             .badRequest()

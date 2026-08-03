@@ -20,8 +20,9 @@ enum class ErrorCode(
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "만료된 토큰입니다."),
 
     // 이메일 인증
-    EMAIL_VERIFICATION_CODE_NOT_FOUND(HttpStatus.BAD_REQUEST, "인증 코드가 존재하지 않거나 만료되었습니다."),
-    EMAIL_VERIFICATION_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "인증 코드가 일치하지 않습니다."),
+    EMAIL_VERIFICATION_CODE_NOT_FOUND(HttpStatus.UNPROCESSABLE_ENTITY, "인증 코드가 존재하지 않거나 만료되었습니다."),
+    EMAIL_VERIFICATION_CODE_MISMATCH(HttpStatus.UNPROCESSABLE_ENTITY, "인증 코드가 일치하지 않습니다."),
+    EMAIL_VERIFICATION_ALREADY_VERIFIED(HttpStatus.CONFLICT, "이미 인증이 완료된 이메일입니다."),
 
     // 공통
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
