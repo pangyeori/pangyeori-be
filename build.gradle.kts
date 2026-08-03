@@ -4,6 +4,7 @@ plugins {
     id("org.springframework.boot") version "4.1.0"
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("plugin.jpa") version "2.3.21"
+    id("com.epages.restdocs-api-spec") version "0.20.1"
 }
 
 group = "com.debate"
@@ -19,6 +20,18 @@ repositories {
     mavenCentral()
 }
 
+val snippetsDir = file("build/generated-snippets")
+
+openapi3 {
+    setServer("http://localhost:8080")
+    title = "REST Docs Kotlin DSL API"
+    version = "0.0.1"
+    format = "yaml"
+    outputFileNamePrefix = "openapi3"
+    outputDirectory = "build/api-spec"
+    snippetsDirectory = "build/generated-snippets"
+}
+
 dependencies {
     // Web & Validation
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -26,6 +39,12 @@ dependencies {
 
     // JPA
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+
+    // H2
+    runtimeOnly("com.h2database:h2")
+
+    // Redis
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
     // Database
     runtimeOnly("com.mysql:mysql-connector-j")
@@ -40,6 +59,9 @@ dependencies {
     // Development
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
+    // Swagger UI
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0")
+
     // Logging
     implementation("org.springframework.boot:spring-boot-starter-log4j2")
     implementation("io.github.oshai:kotlin-logging-jvm:6.0.9")
@@ -49,7 +71,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
-    testImplementation("com.epages:restdocs-api-spec-mockmvc:0.19.4")
+    testImplementation("com.epages:restdocs-api-spec-mockmvc:0.20.1")
 
     // Kotest
     testImplementation("io.kotest:kotest-runner-junit5:6.1.0")
@@ -62,8 +84,8 @@ dependencies {
 
     // Testcontainers
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
-    testImplementation("org.testcontainers:mysql")
-    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:testcontainers-mysql")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 }
 
 configurations.all {
@@ -77,9 +99,42 @@ kotlin {
     }
 }
 
+allOpen {
+    annotation("jakarta.persistence.Entity")
+    annotation("jakarta.persistence.MappedSuperclass")
+    annotation("jakarta.persistence.Embeddable")
+}
+
 tasks.withType<Test> {
     useJUnitPlatform()
+    outputs.dir(snippetsDir)
 }
+
+tasks.test {
+    systemProperty("org.springframework.restdocs.outputDir", snippetsDir.absolutePath)
+}
+
+afterEvaluate {
+    tasks.named("openapi3") { dependsOn(tasks.test); group = null }
+    tasks.named("openapi") { group = null; enabled = false }
+    tasks.named("postman") { group = null; enabled = false }
+}
+
+val copyOpenApiSpec by tasks.registering(Copy::class) {
+    dependsOn("openapi3")
+    from("build/api-spec/openapi3.yaml")
+    into(layout.buildDirectory.dir("resources/main/static/docs"))
+}
+
+val generateDocs by tasks.registering {
+    group = "documentation"
+    description = "테스트 실행 → OpenAPI 3.0 YAML 생성 → static/docs 복사"
+    dependsOn("copyOpenApiSpec")
+}
+
+tasks.bootJar { dependsOn("copyOpenApiSpec") }
+tasks.bootRun { dependsOn("copyOpenApiSpec") }
+tasks.build { dependsOn("copyOpenApiSpec") }
 
 tasks.named<Jar>("jar") {
     enabled = false
