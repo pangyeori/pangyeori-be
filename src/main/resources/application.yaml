@@ -29,6 +29,11 @@ spring:
     enabled: ${FLYWAY_ENABLED:false}
     locations: classpath:db/migration
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT}
+
 springdoc:
   swagger-ui:
     url: /docs/openapi3.yaml
