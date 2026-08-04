@@ -5,5 +5,4 @@ import com.debate.pangyeori.common.exception.ErrorCode
 
 class EmailVerificationCodeNotFoundException : BusinessException(
     errorCode = ErrorCode.EMAIL_VERIFICATION_CODE_NOT_FOUND,
-    message = ErrorCode.EMAIL_VERIFICATION_CODE_NOT_FOUND.message,
 )

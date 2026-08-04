@@ -5,5 +5,4 @@ import com.debate.pangyeori.common.exception.ErrorCode
 
 class EmailVerificationCodeMismatchException : BusinessException(
     errorCode = ErrorCode.EMAIL_VERIFICATION_CODE_MISMATCH,
-    message = ErrorCode.EMAIL_VERIFICATION_CODE_MISMATCH.message,
 )
