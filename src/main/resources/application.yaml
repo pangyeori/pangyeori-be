@@ -46,6 +46,18 @@ spring:
           starttls:
             enable: true
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+  health:
+    mail:
+      enabled: false
+
 springdoc:
   swagger-ui:
     url: /docs/openapi3.yaml

@@ -37,6 +37,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
+    // Actuator
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+
     // Mail
     implementation("org.springframework.boot:spring-boot-starter-mail")
 
