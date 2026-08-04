@@ -140,6 +140,7 @@ val generateDocs by tasks.registering {
     dependsOn("copyOpenApiSpec")
 }
 
+tasks.named("resolveMainClassName") { dependsOn("copyOpenApiSpec") }
 tasks.bootJar { dependsOn("copyOpenApiSpec") }
 tasks.bootRun { dependsOn("copyOpenApiSpec") }
 tasks.build { dependsOn("copyOpenApiSpec") }
