@@ -12,12 +12,12 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/api/v1/email-verifications")
+@RequestMapping("/api/{version}/email-verifications")
 class EmailVerificationController(
     private val emailVerificationService: EmailVerificationService,
 ) {
 
-    @PostMapping
+    @PostMapping(version = "1")
     fun sendCode(
         @RequestBody @Valid request: EmailVerificationRequest,
     ): ResponseEntity<ApiResponse<Unit>> {
@@ -28,7 +28,7 @@ class EmailVerificationController(
         return ResponseEntity.ok(ApiResponse.success(Unit))
     }
 
-    @PostMapping("/confirm")
+    @PostMapping("/confirm", version = "1")
     fun confirmCode(
         @RequestBody @Valid request: EmailVerificationConfirmRequest,
     ): ResponseEntity<ApiResponse<Unit>> {
