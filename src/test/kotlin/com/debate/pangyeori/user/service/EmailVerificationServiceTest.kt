@@ -1,6 +1,7 @@
 package com.debate.pangyeori.user.service
 
 import com.debate.pangyeori.email.EmailSender
+import com.debate.pangyeori.email.exception.EmailSendFailedException
 import com.debate.pangyeori.user.exception.EmailVerificationAlreadyVerifiedException
 import com.debate.pangyeori.user.exception.EmailVerificationCodeMismatchException
 import com.debate.pangyeori.user.exception.EmailVerificationCodeNotFoundException
@@ -9,6 +10,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.string.shouldMatch
 import io.mockk.*
+import org.springframework.mail.MailSendException
 
 class EmailVerificationServiceTest : BehaviorSpec({
 
@@ -52,6 +54,24 @@ class EmailVerificationServiceTest : BehaviorSpec({
                         to = email,
                         subject = any(),
                         content = match { it.contains(codeSlot.captured) },
+                    )
+                }
+            }
+        }
+
+        When("이메일 발송이 재시도 후에도 계속 실패하면") {
+            Then("EmailSendFailedException을 던진다") {
+                every {
+                    emailSender.send(
+                        to = email,
+                        subject = any(),
+                        content = any(),
+                    )
+                } throws MailSendException("발송 실패")
+
+                shouldThrow<EmailSendFailedException> {
+                    emailVerificationService.sendCode(
+                        email = email,
                     )
                 }
             }
