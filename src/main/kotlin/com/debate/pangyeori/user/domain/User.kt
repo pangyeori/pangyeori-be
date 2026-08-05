@@ -24,17 +24,23 @@ class User private constructor(
     @Tsid
     @Column(columnDefinition = "VARCHAR(13)")
     val id: String? = null,
+
     @Column(nullable = false, length = 255)
     val email: String,
+
     @Column(name = "password", nullable = false, length = 255)
     val password: String,
+
     @Column(nullable = false, length = 50)
     val nickname: String,
+
     @Column(name = "profile_image_url", length = 500)
     val profileImageUrl: String?,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     val role: UserRole,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     val status: UserStatus,
