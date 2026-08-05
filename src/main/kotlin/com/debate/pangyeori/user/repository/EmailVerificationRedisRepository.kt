@@ -36,6 +36,12 @@ class EmailVerificationRedisRepository(
         email: String,
     ): Boolean = redisTemplate.hasKey(verifiedKey(email))
 
+    fun clearVerified(
+        email: String,
+    ) {
+        redisTemplate.delete(verifiedKey(email))
+    }
+
     private fun codeKey(
         email: String,
     ) = "$CODE_KEY_PREFIX$email"
