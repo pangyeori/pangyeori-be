@@ -33,6 +33,8 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT}
+      ssl:
+        enabled: true
 
   mail:
     host: ${MAIL_HOST}
@@ -45,6 +47,18 @@ spring:
           auth: true
           starttls:
             enable: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+  health:
+    mail:
+      enabled: false
 
 springdoc:
   swagger-ui:

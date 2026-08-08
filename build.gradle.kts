@@ -37,6 +37,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
+    // Actuator
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+
     // Mail
     implementation("org.springframework.boot:spring-boot-starter-mail")
 
@@ -140,6 +143,7 @@ val generateDocs by tasks.registering {
     dependsOn("copyOpenApiSpec")
 }
 
+tasks.named("resolveMainClassName") { dependsOn("copyOpenApiSpec") }
 tasks.bootJar { dependsOn("copyOpenApiSpec") }
 tasks.bootRun { dependsOn("copyOpenApiSpec") }
 tasks.build { dependsOn("copyOpenApiSpec") }
