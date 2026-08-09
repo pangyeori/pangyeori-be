@@ -36,7 +36,8 @@ dependencies {
     // Web & Validation
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springframework.security:spring-security-crypto")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.security:spring-security-oauth2-jose")
 
     // Actuator
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -78,6 +79,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
+    testImplementation("org.springframework.security:spring-security-test")
     testImplementation("com.epages:restdocs-api-spec-mockmvc:0.20.1")
 
     // Kotest
