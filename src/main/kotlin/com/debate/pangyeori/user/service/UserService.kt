@@ -1,7 +1,7 @@
 package com.debate.pangyeori.user.service
 
 import com.debate.pangyeori.user.domain.User
-import com.debate.pangyeori.user.dto.UserCreateResponse
+import com.debate.pangyeori.user.dto.NicknameDuplicateResponse
 import com.debate.pangyeori.user.exception.EmailAlreadyExistsException
 import com.debate.pangyeori.user.exception.EmailNotVerifiedException
 import com.debate.pangyeori.user.exception.NicknameAlreadyExistsException
@@ -23,7 +23,7 @@ class UserService(
         password: String,
         nickname: String,
         profileImageUrl: String?,
-    ): UserCreateResponse {
+    ) {
         val normalizedEmail = email.trim().lowercase()
         val normalizedNickname = nickname.trim()
 
@@ -52,13 +52,18 @@ class UserService(
             nickname = normalizedNickname,
             profileImageUrl = profileImageUrl?.trim()?.takeIf { it.isNotEmpty() },
         )
-        val savedUser = userRepository.save(user)
+        userRepository.save(user)
         emailVerificationRedisRepository.clearVerified(
             email = normalizedEmail,
         )
-
-        return UserCreateResponse.from(
-            user = savedUser,
-        )
     }
+
+    @Transactional(readOnly = true)
+    fun checkNicknameDuplicate(
+        nickname: String,
+    ) = NicknameDuplicateResponse(
+        duplicated = userRepository.existsByNickname(
+            nickname = nickname.trim(),
+        ),
+    )
 }
