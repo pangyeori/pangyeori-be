@@ -1,4 +1,4 @@
-package com.debate.pangyeori.user.domain
+package com.debate.pangyeori.user.domain.enums
 
 enum class UserStatus {
     ACTIVE,

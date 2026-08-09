@@ -1,6 +1,8 @@
 package com.debate.pangyeori.user.domain
 
 import com.debate.pangyeori.common.entity.BaseEntity
+import com.debate.pangyeori.user.domain.enums.UserRole
+import com.debate.pangyeori.user.domain.enums.UserStatus
 import io.hypersistence.utils.hibernate.id.Tsid
 import jakarta.persistence.*
 import org.hibernate.annotations.SQLDelete
