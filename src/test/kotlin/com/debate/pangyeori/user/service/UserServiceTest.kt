@@ -22,18 +22,16 @@ import io.mockk.verify
 import org.springframework.security.crypto.password.PasswordEncoder
 
 class UserServiceTest : BehaviorSpec({
-    val userRepository = mockk<UserRepository>(
-        relaxed = true,
-    )
-    val emailVerificationRedisRepository = mockk<EmailVerificationRedisRepository>(
-        relaxed = true,
-    )
+    val userRepository = mockk<UserRepository>()
+    val emailVerificationRedisRepository = mockk<EmailVerificationRedisRepository>()
     val passwordEncoder = mockk<PasswordEncoder>()
+
     val userService = UserService(
         userRepository = userRepository,
         emailVerificationRedisRepository = emailVerificationRedisRepository,
         passwordEncoder = passwordEncoder,
     )
+
     val fixtureMonkey = FixtureMonkey.builder()
         .plugin(KotlinPlugin())
         .build()
@@ -66,6 +64,16 @@ class UserServiceTest : BehaviorSpec({
                     )
                 } returns true
                 every {
+                    userRepository.existsByEmail(
+                        email = email,
+                    )
+                } returns false
+                every {
+                    userRepository.existsByNickname(
+                        nickname = nickname,
+                    )
+                } returns false
+                every {
                     passwordEncoder.encode(password)
                 } returns "encoded-password"
                 every {
@@ -77,7 +85,7 @@ class UserServiceTest : BehaviorSpec({
                     )
                 } just runs
 
-                val response = userService.createUser(
+                userService.createUser(
                     email = email,
                     password = password,
                     nickname = nickname,
@@ -85,7 +93,6 @@ class UserServiceTest : BehaviorSpec({
                 )
 
                 userSlot.captured.password shouldBe "encoded-password"
-                response.id shouldBe "0000000000001"
                 verify {
                     emailVerificationRedisRepository.clearVerified(
                         email = email,
@@ -147,6 +154,11 @@ class UserServiceTest : BehaviorSpec({
         When("이미 사용 중인 닉네임이면") {
             Then("NicknameAlreadyExistsException을 던진다") {
                 every {
+                    userRepository.existsByEmail(
+                        email = email,
+                    )
+                } returns false
+                every {
                     userRepository.existsByNickname(
                         nickname = nickname,
                     )
@@ -160,6 +172,40 @@ class UserServiceTest : BehaviorSpec({
                         profileImageUrl = null,
                     )
                 }
+            }
+        }
+    }
+
+    Given("닉네임 중복 여부를 확인할 때") {
+        When("이미 사용 중인 닉네임이면") {
+            Then("중복 여부로 true를 반환한다") {
+                every {
+                    userRepository.existsByNickname(
+                        nickname = nickname,
+                    )
+                } returns true
+
+                val response = userService.checkNicknameDuplicate(
+                    nickname = nickname,
+                )
+
+                response.duplicated shouldBe true
+            }
+        }
+
+        When("사용 가능한 닉네임이면") {
+            Then("중복 여부로 false를 반환한다") {
+                every {
+                    userRepository.existsByNickname(
+                        nickname = nickname,
+                    )
+                } returns false
+
+                val response = userService.checkNicknameDuplicate(
+                    nickname = nickname,
+                )
+
+                response.duplicated shouldBe false
             }
         }
     }
