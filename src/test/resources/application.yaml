@@ -15,6 +15,11 @@ spring:
   flyway:
     enabled: false
 
+  data:
+    redis:
+      repositories:
+        enabled: false
+
   mail:
     host: smtp.gmail.com
     port: 587
