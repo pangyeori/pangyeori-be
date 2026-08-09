@@ -35,15 +35,35 @@ class UserControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(201)
+            }
+        }
+    }
+
+    @Test
+    fun `닉네임 중복 여부를 확인한다`() {
+        userRepository.save(
+            User.create(
+                email = "nickname-check@pangyeori.com",
+                password = "encoded-password",
+                nickname = "판결이",
+                profileImageUrl = null,
+            ),
+        )
+
+        restDocs(mockMvc, "users/check-nickname-duplicate") {
+            summary("닉네임 중복 확인")
+            request {
+                get("/api/v1/users/nickname/duplicate")
+                queryParameters {
+                    param("nickname", "판결이", "중복 여부를 확인할 닉네임")
+                }
+            }
+            response {
+                status(200)
                 body {
                     field("success", "처리 성공 여부")
-                    obj("data", "생성된 회원 정보") {
-                        field("id", "회원 ID")
-                        field("email", "회원 이메일")
-                        field("nickname", "회원 닉네임")
-                        field("profileImageUrl", "프로필 이미지 URL").optional()
-                        field("role", "회원 역할")
-                        field("status", "회원 상태")
+                    obj("data", "닉네임 중복 확인 결과") {
+                        field("duplicated", "닉네임 중복 여부")
                     }
                     field("error", "에러 정보").optional()
                 }
