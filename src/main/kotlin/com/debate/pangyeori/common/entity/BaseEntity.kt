@@ -18,7 +18,11 @@ abstract class BaseEntity {
         protected set
 
     @LastModifiedDate
-    @Column(name = "modified_at", nullable = false)
+    @Column(
+        name = "modified_at",
+        nullable = false,
+        columnDefinition = "datetime(6) default current_timestamp(6)",
+    )
     var modifiedAt: LocalDateTime? = null
         protected set
 
