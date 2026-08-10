@@ -40,21 +40,8 @@ class SecurityConfig {
             it.accessDeniedHandler(accessDeniedHandler)
         }
         .authorizeHttpRequests {
-            it.requestMatchers(
-                "/api/v1/email-verifications/**",
-                "/actuator/health",
-                "/swagger-ui/**",
-                "/v3/api-docs/**",
-                "/docs/**",
-            ).permitAll()
-            it.requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
-            it.requestMatchers(HttpMethod.GET, "/api/v1/users/nickname/duplicate").permitAll()
-            it.requestMatchers(
-                HttpMethod.POST,
-                "/api/v1/users/signin",
-                "/api/v1/users/refresh",
-                "/api/v1/users/signout",
-            ).permitAll()
+            it.requestMatchers(HttpMethod.GET, *PUBLIC_GET_PATHS).permitAll()
+            it.requestMatchers(HttpMethod.POST, *PUBLIC_POST_PATHS).permitAll()
             it.anyRequest().authenticated()
         }
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
@@ -93,5 +80,21 @@ class SecurityConfig {
     companion object {
         private const val MINIMUM_SECRET_LENGTH = 32
         private const val HMAC_ALGORITHM = "HmacSHA256"
+
+        private val PUBLIC_GET_PATHS = arrayOf(
+            "/actuator/health",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/docs/**",
+            "/api/v1/users/nickname/duplicate",
+        )
+
+        private val PUBLIC_POST_PATHS = arrayOf(
+            "/api/v1/email-verifications/**",
+            "/api/v1/users",
+            "/api/v1/users/signin",
+            "/api/v1/users/refresh",
+            "/api/v1/users/signout",
+        )
     }
 }
