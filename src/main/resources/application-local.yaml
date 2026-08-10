@@ -1,0 +1,5 @@
+spring:
+  data:
+    redis:
+      ssl:
+        enabled: false
