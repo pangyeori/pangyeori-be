@@ -36,7 +36,7 @@ spring:
       timeout: 3000ms
       connect-timeout: 3000ms
       ssl:
-        enabled: true
+        enabled: ${REDIS_SSL_ENABLED:true}
 
   mail:
     host: ${MAIL_HOST}
