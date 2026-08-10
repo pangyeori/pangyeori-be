@@ -71,8 +71,8 @@ class SecurityConfig {
     private fun secretKey(
         secret: String,
     ): SecretKeySpec {
-        require(secret.toByteArray().size >= MINIMUM_SECRET_LENGTH) {
-            "security.jwt.secret must be at least $MINIMUM_SECRET_LENGTH bytes"
+        if (secret.toByteArray().size < MINIMUM_SECRET_LENGTH) {
+            throw IllegalArgumentException("security.jwt.secret must be at least $MINIMUM_SECRET_LENGTH bytes")
         }
         return SecretKeySpec(secret.toByteArray(), HMAC_ALGORITHM)
     }

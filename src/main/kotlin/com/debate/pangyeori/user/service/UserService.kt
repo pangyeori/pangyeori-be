@@ -48,7 +48,7 @@ class UserService(
 
         val user = User.create(
             email = normalizedEmail,
-            password = requireNotNull(passwordEncoder.encode(password)),
+            password = passwordEncoder.encode(password)!!,
             nickname = normalizedNickname,
             profileImageUrl = profileImageUrl?.trim()?.takeIf { it.isNotEmpty() },
         )
