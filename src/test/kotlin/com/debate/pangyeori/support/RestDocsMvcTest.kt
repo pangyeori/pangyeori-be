@@ -9,6 +9,7 @@ import org.springframework.restdocs.RestDocumentationContextProvider
 import org.springframework.restdocs.RestDocumentationExtension
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation
 import org.springframework.restdocs.operation.preprocess.Preprocessors
+import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder
@@ -40,6 +41,7 @@ abstract class RestDocsMvcTest {
     ) {
         mockMvc = MockMvcBuilders
             .webAppContextSetup(context)
+            .apply<DefaultMockMvcBuilder>(springSecurity())
             .apply<DefaultMockMvcBuilder>(
                 MockMvcRestDocumentation.documentationConfiguration(provider)
                     .operationPreprocessors()
