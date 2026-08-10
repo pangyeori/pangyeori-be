@@ -19,6 +19,9 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.CorsConfigurationSource
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import javax.crypto.spec.SecretKeySpec
 
 @Configuration
@@ -30,8 +33,10 @@ class SecurityConfig {
         jwtAuthenticationFilter: JwtAuthenticationFilter,
         authenticationEntryPoint: RestAuthenticationEntryPoint,
         accessDeniedHandler: RestAccessDeniedHandler,
+        corsConfigurationSource: CorsConfigurationSource,
     ): SecurityFilterChain = http
         .csrf { it.disable() }
+        .cors { it.configurationSource(corsConfigurationSource) }
         .sessionManagement {
             it.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         }
@@ -46,6 +51,21 @@ class SecurityConfig {
         }
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
         .build()
+
+    @Bean
+    fun corsConfigurationSource(
+        @Value("\${cors.allowed-origins}") allowedOrigins: List<String>,
+    ): CorsConfigurationSource {
+        val configuration = CorsConfiguration()
+        configuration.allowedOrigins = allowedOrigins
+        configuration.allowedMethods = ALLOWED_METHODS
+        configuration.allowedHeaders = listOf("*")
+        configuration.allowCredentials = true
+
+        val source = UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration(CORS_PATH_PATTERN, configuration)
+        return source
+    }
 
     @Bean
     fun jwtEncoder(
@@ -96,5 +116,8 @@ class SecurityConfig {
             "/api/v1/users/refresh",
             "/api/v1/users/signout",
         )
+
+        private const val CORS_PATH_PATTERN = "/api/**"
+        private val ALLOWED_METHODS = listOf("GET", "POST", "PUT", "PATCH", "DELETE")
     }
 }
