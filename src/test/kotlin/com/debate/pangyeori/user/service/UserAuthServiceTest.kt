@@ -1,11 +1,12 @@
 package com.debate.pangyeori.user.service
 
+import com.debate.pangyeori.user.domain.RefreshToken
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.domain.enums.UserRole
 import com.debate.pangyeori.user.domain.enums.UserStatus
 import com.debate.pangyeori.user.exception.InvalidCredentialsException
 import com.debate.pangyeori.user.exception.InvalidTokenException
-import com.debate.pangyeori.user.repository.RefreshTokenRedisRepository
+import com.debate.pangyeori.user.repository.RefreshTokenRepository
 import com.debate.pangyeori.user.repository.UserRepository
 import com.debate.pangyeori.user.token.TokenProvider
 import com.navercorp.fixturemonkey.FixtureMonkey
@@ -13,12 +14,11 @@ import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
 import com.navercorp.fixturemonkey.kotlin.giveMeKotlinBuilder
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
 import io.mockk.verify
 import org.springframework.security.crypto.password.PasswordEncoder
 
@@ -26,13 +26,13 @@ class UserAuthServiceTest : BehaviorSpec({
     val userRepository = mockk<UserRepository>()
     val passwordEncoder = mockk<PasswordEncoder>()
     val tokenProvider = mockk<TokenProvider>()
-    val refreshTokenRedisRepository = mockk<RefreshTokenRedisRepository>()
+    val refreshTokenRepository = mockk<RefreshTokenRepository>()
 
     val userAuthService = UserAuthService(
         userRepository = userRepository,
         passwordEncoder = passwordEncoder,
         tokenProvider = tokenProvider,
-        refreshTokenRedisRepository = refreshTokenRedisRepository,
+        refreshTokenRepository = refreshTokenRepository,
     )
 
     val fixtureMonkey = FixtureMonkey.builder()
@@ -63,7 +63,7 @@ class UserAuthServiceTest : BehaviorSpec({
             userRepository,
             passwordEncoder,
             tokenProvider,
-            refreshTokenRedisRepository,
+            refreshTokenRepository,
         )
     }
 
@@ -85,12 +85,8 @@ class UserAuthServiceTest : BehaviorSpec({
                     )
                 } returns issuedTokens
                 every {
-                    refreshTokenRedisRepository.save(
-                        token = issuedTokens.refreshToken,
-                        email = email,
-                        expiresInSeconds = issuedTokens.refreshTokenExpiresIn,
-                    )
-                } just runs
+                    refreshTokenRepository.save(any())
+                } answers { firstArg() }
 
                 val response = userAuthService.signIn(
                     email = email,
@@ -100,10 +96,11 @@ class UserAuthServiceTest : BehaviorSpec({
                 response.accessToken shouldBe issuedTokens.accessToken
                 response.refreshToken shouldBe issuedTokens.refreshToken
                 verify {
-                    refreshTokenRedisRepository.save(
-                        token = issuedTokens.refreshToken,
-                        email = email,
-                        expiresInSeconds = issuedTokens.refreshTokenExpiresIn,
+                    refreshTokenRepository.save(
+                        match {
+                            it.user == user &&
+                                it.tokenHash == RefreshToken.hash(issuedTokens.refreshToken)
+                        },
                     )
                 }
             }
@@ -140,34 +137,29 @@ class UserAuthServiceTest : BehaviorSpec({
                     role = UserRole.USER.name,
                     tokenId = "0000000000002",
                 )
+                val savedToken = RefreshToken.create(
+                    user = user,
+                    token = refreshToken,
+                    expiresInSeconds = issuedTokens.refreshTokenExpiresIn,
+                )
                 every {
                     tokenProvider.parseRefreshToken(
                         token = refreshToken,
                     )
                 } returns claims
                 every {
-                    userRepository.findByEmail(
-                        email = email,
+                    refreshTokenRepository.findByTokenHashForUpdate(
+                        tokenHash = RefreshToken.hash(refreshToken),
                     )
-                } returns user
-                every {
-                    refreshTokenRedisRepository.consume(
-                        token = refreshToken,
-                        email = email,
-                    )
-                } returns true
+                } returns savedToken
                 every {
                     tokenProvider.issue(
                         user = user,
                     )
                 } returns issuedTokens
                 every {
-                    refreshTokenRedisRepository.save(
-                        token = issuedTokens.refreshToken,
-                        email = email,
-                        expiresInSeconds = issuedTokens.refreshTokenExpiresIn,
-                    )
-                } just runs
+                    refreshTokenRepository.save(any())
+                } answers { firstArg() }
 
                 val response = userAuthService.refresh(
                     refreshToken = refreshToken,
@@ -175,17 +167,16 @@ class UserAuthServiceTest : BehaviorSpec({
 
                 response.refreshToken shouldBe issuedTokens.refreshToken
                 verify {
-                    refreshTokenRedisRepository.consume(
-                        token = refreshToken,
-                        email = email,
+                    refreshTokenRepository.findByTokenHashForUpdate(
+                        tokenHash = RefreshToken.hash(refreshToken),
                     )
                 }
+                savedToken.revokedAt.shouldNotBeNull()
             }
         }
 
         When("이미 소비된 토큰이면") {
             Then("InvalidTokenException을 던진다") {
-                val user = activeUser()
                 val claims = TokenProvider.TokenClaims(
                     subject = email,
                     role = UserRole.USER.name,
@@ -197,16 +188,10 @@ class UserAuthServiceTest : BehaviorSpec({
                     )
                 } returns claims
                 every {
-                    userRepository.findByEmail(
-                        email = email,
+                    refreshTokenRepository.findByTokenHashForUpdate(
+                        tokenHash = RefreshToken.hash(refreshToken),
                     )
-                } returns user
-                every {
-                    refreshTokenRedisRepository.consume(
-                        token = refreshToken,
-                        email = email,
-                    )
-                } returns false
+                } returns null
 
                 shouldThrow<InvalidTokenException> {
                     userAuthService.refresh(
