@@ -4,6 +4,7 @@ import com.debate.pangyeori.support.RestDocsMvcTest
 import com.debate.pangyeori.support.dsl.restDocs
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.repository.UserRepository
+import com.debate.pangyeori.user.token.RefreshTokenCookieProvider
 import com.debate.pangyeori.user.service.UserAuthService
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -42,11 +43,11 @@ class UserAuthControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(200)
+                header("Set-Cookie", "${RefreshTokenCookieProvider.COOKIE_NAME} (발급된 Refresh Token, HttpOnly)")
                 body {
                     field("success", "처리 성공 여부")
                     obj("data", "발급된 인증 토큰") {
                         field("accessToken", "API 인증에 사용하는 Access Token")
-                        field("refreshToken", "토큰 재발급에 사용하는 Refresh Token")
                         field("tokenType", "인증 헤더 타입")
                         field("accessTokenExpiresIn", "Access Token 만료 시간(초)")
                         field("refreshTokenExpiresIn", "Refresh Token 만료 시간(초)")
@@ -142,17 +143,17 @@ class UserAuthControllerTest : RestDocsMvcTest() {
             tag("Users")
             request {
                 post("/api/v1/users/refresh")
-                body {
-                    field("refreshToken", refreshToken, "재발급에 사용할 Refresh Token")
+                cookies {
+                    cookie("refreshToken", refreshToken, "재발급에 사용할 Refresh Token")
                 }
             }
             response {
                 status(200)
+                header("Set-Cookie", "${RefreshTokenCookieProvider.COOKIE_NAME} (회전된(rotate) 새 Refresh Token, HttpOnly)")
                 body {
                     field("success", "처리 성공 여부")
                     obj("data", "재발급된 인증 토큰") {
                         field("accessToken", "API 인증에 사용하는 Access Token")
-                        field("refreshToken", "회전된 Refresh Token")
                         field("tokenType", "인증 헤더 타입")
                         field("accessTokenExpiresIn", "Access Token 만료 시간(초)")
                         field("refreshTokenExpiresIn", "Refresh Token 만료 시간(초)")
@@ -185,8 +186,8 @@ class UserAuthControllerTest : RestDocsMvcTest() {
             tag("Users")
             request {
                 post("/api/v1/users/signout")
-                body {
-                    field("refreshToken", refreshToken, "폐기할 Refresh Token")
+                cookies {
+                    cookie("refreshToken", refreshToken, "폐기할 Refresh Token")
                 }
             }
             response {

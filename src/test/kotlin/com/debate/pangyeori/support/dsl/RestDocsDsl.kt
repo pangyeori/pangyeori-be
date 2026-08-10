@@ -2,6 +2,8 @@ package com.debate.pangyeori.support.dsl
 
 import com.epages.restdocs.apispec.ResourceDocumentation
 import com.epages.restdocs.apispec.ResourceSnippetParameters
+import org.springframework.restdocs.cookies.CookieDocumentation
+import org.springframework.restdocs.headers.HeaderDocumentation
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation
 import org.springframework.restdocs.payload.PayloadDocumentation
 import org.springframework.restdocs.request.RequestDocumentation
@@ -101,6 +103,14 @@ class RestDocsDsl(
             ?.takeIf { it.isNotEmpty() }
             ?.let { snippets += PayloadDocumentation.responseFields(*it.toTypedArray()) }
 
+        req.cookieDsl?.descriptors()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { snippets += CookieDocumentation.requestCookies(*it.toTypedArray()) }
+
+        res.headers()
+            .takeIf { it.isNotEmpty() }
+            ?.let { snippets += HeaderDocumentation.responseHeaders(*it.toTypedArray()) }
+
         summary?.let { sum ->
             val resolvedTag = tag ?: identifier.substringBefore("/")
                 .replaceFirstChar { it.uppercase() }
@@ -124,6 +134,12 @@ class RestDocsDsl(
             res.bodyDsl?.descriptors()
                 ?.takeIf { it.isNotEmpty() }
                 ?.let { builder.responseFields(*it.toTypedArray()) }
+
+            // com.epages:restdocs-api-spec 0.20.1은 OpenAPI 쿠키 파라미터를 지원하지 않아
+            // 요청 쿠키는 Swagger 문서에 반영할 수 없다. 응답 쿠키는 Set-Cookie 헤더로 대신 문서화한다.
+            res.headers()
+                .takeIf { it.isNotEmpty() }
+                ?.let { builder.responseHeaders(*it.toTypedArray()) }
 
             snippets += ResourceDocumentation.resource(builder.build())
         }
