@@ -3,12 +3,17 @@ package com.debate.pangyeori.user.controller
 import com.debate.pangyeori.common.dto.ApiResponse
 import com.debate.pangyeori.user.dto.SignInRequest
 import com.debate.pangyeori.user.dto.SignInResponse
+import com.debate.pangyeori.user.exception.InvalidTokenException
 import com.debate.pangyeori.user.service.UserAuthService
 import com.debate.pangyeori.user.token.RefreshTokenCookieProvider
 import jakarta.validation.Valid
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.CookieValue
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -43,10 +48,14 @@ class UserAuthController(
 
     @PostMapping("/refresh")
     fun refresh(
-        @CookieValue(RefreshTokenCookieProvider.COOKIE_NAME) refreshToken: String,
+        @CookieValue(
+            name = RefreshTokenCookieProvider.COOKIE_NAME,
+            required = false,
+        )
+        refreshToken: String?,
     ): ResponseEntity<ApiResponse<SignInResponse>> {
         val response = userAuthService.refresh(
-            refreshToken = refreshToken,
+            refreshToken = refreshToken ?: throw InvalidTokenException(),
         )
 
         return ResponseEntity.ok()
@@ -66,11 +75,17 @@ class UserAuthController(
 
     @PostMapping("/signout")
     fun logout(
-        @CookieValue(RefreshTokenCookieProvider.COOKIE_NAME) refreshToken: String,
-    ): ResponseEntity<Void> {
-        userAuthService.logout(
-            refreshToken = refreshToken,
+        @CookieValue(
+            name = RefreshTokenCookieProvider.COOKIE_NAME,
+            required = false,
         )
+        refreshToken: String?,
+    ): ResponseEntity<Void> {
+        if (refreshToken != null) {
+            userAuthService.logout(
+                refreshToken = refreshToken,
+            )
+        }
 
         return ResponseEntity.noContent()
             .header(HttpHeaders.SET_COOKIE, refreshTokenCookieProvider.clear().toString())
