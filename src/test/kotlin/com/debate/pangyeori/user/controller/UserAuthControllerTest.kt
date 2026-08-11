@@ -195,4 +195,41 @@ class UserAuthControllerTest : RestDocsMvcTest() {
             }
         }
     }
+
+    @Test
+    fun `refresh token 쿠키가 없으면 재발급에 실패한다`() {
+        restDocs(mockMvc, "users/refresh-missing-cookie") {
+            summary("토큰 재발급")
+            tag("Users")
+            request {
+                post("/api/v1/users/refresh")
+            }
+            response {
+                status(401)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `refresh token 쿠키가 없어도 로그아웃에 성공한다`() {
+        restDocs(mockMvc, "users/signout-missing-cookie") {
+            summary("로그아웃")
+            tag("Users")
+            request {
+                post("/api/v1/users/signout")
+            }
+            response {
+                status(204)
+            }
+        }
+    }
 }
