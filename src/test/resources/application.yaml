@@ -26,3 +26,13 @@ spring:
           auth: true
           starttls:
             enable: true
+
+security:
+  jwt:
+    issuer: pangyeori
+    secret: test-secret-key-must-be-at-least-32-bytes-long
+    access-token-expiration: 15m
+    refresh-token-expiration: 14d
+
+cors:
+  allowed-origins: http://example.com

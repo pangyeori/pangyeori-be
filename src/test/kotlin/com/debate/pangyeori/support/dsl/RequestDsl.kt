@@ -1,5 +1,6 @@
 package com.debate.pangyeori.support.dsl
 
+import jakarta.servlet.http.Cookie
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
@@ -25,6 +26,7 @@ class RequestDsl {
     internal var multipartDsl: MultipartDsl? = null
     internal var pathParameterDsl: PathParameterDsl? = null
     internal var queryParameterDsl: QueryParameterDsl? = null
+    internal var cookieDsl: RequestCookieDsl? = null
 
     fun get(urlTemplate: String) = method(HttpMethod.GET, urlTemplate)
     fun post(urlTemplate: String) = method(HttpMethod.POST, urlTemplate)
@@ -39,6 +41,10 @@ class RequestDsl {
 
     fun header(name: String, value: String) {
         headers[name] = value
+    }
+
+    fun cookies(block: RequestCookieDsl.() -> Unit) {
+        cookieDsl = RequestCookieDsl().apply(block)
     }
 
     fun body(block: RequestBodyDsl.() -> Unit) {
@@ -116,6 +122,9 @@ class RequestDsl {
 
     private fun applyCommon(builder: AbstractMockHttpServletRequestBuilder<*>) {
         headers.forEach { (k, v) -> builder.header(k, v) }
+        cookieDsl?.cookies
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { list -> builder.cookie(*list.map { Cookie(it.name, it.value) }.toTypedArray()) }
         queryParameterDsl?.params?.forEach { p ->
             p.value?.let { builder.param(p.name, it) }
         }

@@ -72,6 +72,87 @@ class UserControllerTest : RestDocsMvcTest() {
     }
 
     @Test
+    fun `닉네임을 입력하지 않으면 400을 반환한다`() {
+        restDocs(mockMvc, "users/check-nickname-duplicate-missing-nickname") {
+            summary("닉네임 중복 확인")
+            request {
+                get("/api/v1/users/nickname/duplicate")
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "에러 정보") {
+                        field("code", "에러 코드")
+                        field("message", "에러 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `닉네임이 2자 미만이면 400을 반환한다`() {
+        restDocs(mockMvc, "users/check-nickname-duplicate-too-short") {
+            summary("닉네임 중복 확인")
+            request {
+                get("/api/v1/users/nickname/duplicate")
+                queryParameters {
+                    param("nickname", "a", "2자 미만의 닉네임")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "에러 정보") {
+                        field("code", "에러 코드")
+                        field("message", "에러 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `닉네임이 50자를 초과하면 400을 반환한다`() {
+        restDocs(mockMvc, "users/check-nickname-duplicate-too-long") {
+            summary("닉네임 중복 확인")
+            request {
+                get("/api/v1/users/nickname/duplicate")
+                queryParameters {
+                    param("nickname", "a".repeat(51), "50자를 초과하는 닉네임")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "에러 정보") {
+                        field("code", "에러 코드")
+                        field("message", "에러 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun `이메일 인증을 완료하지 않으면 422를 반환한다`() {
         restDocs(mockMvc, "users/create-not-verified") {
             summary("회원가입")

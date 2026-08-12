@@ -1,7 +1,7 @@
 package com.debate.pangyeori.user.service
 
 import com.debate.pangyeori.user.domain.User
-import com.debate.pangyeori.user.dto.NicknameDuplicateResponse
+import com.debate.pangyeori.user.dto.response.NicknameDuplicateResponse
 import com.debate.pangyeori.user.exception.EmailAlreadyExistsException
 import com.debate.pangyeori.user.exception.EmailNotVerifiedException
 import com.debate.pangyeori.user.exception.NicknameAlreadyExistsException
@@ -48,7 +48,7 @@ class UserService(
 
         val user = User.create(
             email = normalizedEmail,
-            password = requireNotNull(passwordEncoder.encode(password)),
+            password = passwordEncoder.encode(password)!!,
             nickname = normalizedNickname,
             profileImageUrl = profileImageUrl?.trim()?.takeIf { it.isNotEmpty() },
         )
