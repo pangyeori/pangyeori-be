@@ -2,15 +2,23 @@ package com.debate.pangyeori.support.dsl
 
 import com.epages.restdocs.apispec.ResourceDocumentation
 import com.epages.restdocs.apispec.ResourceSnippetParameters
+import org.springframework.http.HttpHeaders
 import org.springframework.restdocs.cookies.CookieDocumentation
 import org.springframework.restdocs.headers.HeaderDocumentation
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation
+import org.springframework.restdocs.operation.OperationRequest
+import org.springframework.restdocs.operation.OperationResponse
+import org.springframework.restdocs.operation.OperationResponseFactory
+import org.springframework.restdocs.operation.preprocess.OperationPreprocessor
+import org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessResponse
+import org.springframework.restdocs.operation.preprocess.Preprocessors.replacePattern
 import org.springframework.restdocs.payload.PayloadDocumentation
 import org.springframework.restdocs.request.RequestDocumentation
 import org.springframework.restdocs.snippet.Snippet
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultActions
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.util.regex.Pattern
 
 /**
  * DSL 블록이 바깥 블록의 메서드를 실수로 호출하지 못하도록 스코프를 격리하는 어노테이션.
@@ -52,6 +60,10 @@ class RestDocsDsl(
     private var requestDsl: RequestDsl? = null
     private var responseDsl: ResponseDsl = ResponseDsl()
 
+    // JWT는 header·payload가 항상 "eyJ"(= '{"'의 base64url 인코딩 결과)로 시작하므로, 이 특징으로 좁혀 매치해 응답 바디·헤더에 실제 토큰 값이 노출되지 않도록 마스킹
+    private val jwtPattern: Pattern = Pattern.compile("eyJ[A-Za-z0-9_-]+\\.eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+")
+    private val maskedJwt = "<jwtToken>"
+
     fun summary(value: String) {
         summary = value
     }
@@ -77,7 +89,29 @@ class RestDocsDsl(
 
         return mockMvc.perform(requestBuilder)
             .andExpect(status().`is`(res.expectedStatus))
-            .andDo(MockMvcRestDocumentation.document(identifier, *snippets.toTypedArray()))
+            .andDo(
+                MockMvcRestDocumentation.document(
+                    identifier,
+                    preprocessResponse(replacePattern(jwtPattern, maskedJwt), jwtHeaderMaskingPreprocessor()),
+                    *snippets.toTypedArray(),
+                ),
+            )
+    }
+
+    // Set-Cookie 값 마스킹을 위해 OperationPreprocessor
+    private fun jwtHeaderMaskingPreprocessor(): OperationPreprocessor = object : OperationPreprocessor {
+        private val responseFactory = OperationResponseFactory()
+
+        override fun preprocess(request: OperationRequest) = request
+
+        override fun preprocess(response: OperationResponse): OperationResponse {
+            val maskedHeaders = HttpHeaders()
+            response.headers.forEach { name, values ->
+                maskedHeaders.put(name, values.map { jwtPattern.matcher(it).replaceAll(maskedJwt) })
+            }
+
+            return responseFactory.createFrom(response, maskedHeaders)
+        }
     }
 
     private fun buildSnippets(req: RequestDsl, res: ResponseDsl): List<Snippet> {
