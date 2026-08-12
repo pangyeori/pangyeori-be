@@ -1,8 +1,8 @@
 package com.debate.pangyeori.user.controller
 
 import com.debate.pangyeori.common.dto.ApiResponse
-import com.debate.pangyeori.user.dto.SignInRequest
-import com.debate.pangyeori.user.dto.SignInResponse
+import com.debate.pangyeori.user.dto.request.SignInRequest
+import com.debate.pangyeori.user.dto.response.SignInResponse
 import com.debate.pangyeori.user.exception.InvalidTokenException
 import com.debate.pangyeori.user.service.UserAuthService
 import com.debate.pangyeori.user.token.RefreshTokenCookieProvider

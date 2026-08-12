@@ -1,7 +1,7 @@
 package com.debate.pangyeori.user.service
 
 import com.debate.pangyeori.user.domain.User
-import com.debate.pangyeori.user.dto.NicknameDuplicateResponse
+import com.debate.pangyeori.user.dto.response.NicknameDuplicateResponse
 import com.debate.pangyeori.user.exception.EmailAlreadyExistsException
 import com.debate.pangyeori.user.exception.EmailNotVerifiedException
 import com.debate.pangyeori.user.exception.NicknameAlreadyExistsException

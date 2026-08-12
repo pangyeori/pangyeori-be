@@ -3,7 +3,7 @@ package com.debate.pangyeori.user.service
 import com.debate.pangyeori.user.domain.RefreshToken
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.domain.enums.UserStatus
-import com.debate.pangyeori.user.dto.SignInResponse
+import com.debate.pangyeori.user.dto.response.SignInResponse
 import com.debate.pangyeori.user.exception.InvalidCredentialsException
 import com.debate.pangyeori.user.exception.InvalidTokenException
 import com.debate.pangyeori.user.repository.RefreshTokenRepository

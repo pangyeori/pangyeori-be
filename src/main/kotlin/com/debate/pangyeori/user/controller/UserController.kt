@@ -1,9 +1,9 @@
 package com.debate.pangyeori.user.controller
 
 import com.debate.pangyeori.common.dto.ApiResponse
-import com.debate.pangyeori.user.dto.NicknameDuplicateRequest
-import com.debate.pangyeori.user.dto.NicknameDuplicateResponse
-import com.debate.pangyeori.user.dto.UserCreateRequest
+import com.debate.pangyeori.user.dto.request.NicknameDuplicateRequest
+import com.debate.pangyeori.user.dto.request.UserCreateRequest
+import com.debate.pangyeori.user.dto.response.NicknameDuplicateResponse
 import com.debate.pangyeori.user.service.UserService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus

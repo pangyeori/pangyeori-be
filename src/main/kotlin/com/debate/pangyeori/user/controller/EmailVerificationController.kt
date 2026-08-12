@@ -1,8 +1,8 @@
 package com.debate.pangyeori.user.controller
 
 import com.debate.pangyeori.common.dto.ApiResponse
-import com.debate.pangyeori.user.dto.EmailVerificationConfirmRequest
-import com.debate.pangyeori.user.dto.EmailVerificationRequest
+import com.debate.pangyeori.user.dto.request.EmailVerificationConfirmRequest
+import com.debate.pangyeori.user.dto.request.EmailVerificationRequest
 import com.debate.pangyeori.user.service.EmailVerificationService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity

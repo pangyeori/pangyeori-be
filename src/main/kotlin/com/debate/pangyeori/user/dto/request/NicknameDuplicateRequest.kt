@@ -1,4 +1,4 @@
-package com.debate.pangyeori.user.dto
+package com.debate.pangyeori.user.dto.request
 
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size

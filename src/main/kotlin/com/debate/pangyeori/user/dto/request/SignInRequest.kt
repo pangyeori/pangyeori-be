@@ -1,4 +1,4 @@
-package com.debate.pangyeori.user.dto
+package com.debate.pangyeori.user.dto.request
 
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
