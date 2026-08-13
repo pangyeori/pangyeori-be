@@ -1,6 +1,7 @@
 package com.debate.pangyeori.email
 
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Profile
 import org.springframework.resilience.annotation.Retryable
 import org.springframework.stereotype.Component
 import software.amazon.awssdk.core.exception.SdkException
@@ -13,6 +14,7 @@ import software.amazon.awssdk.services.sesv2.model.Message
 import software.amazon.awssdk.services.sesv2.model.SendEmailRequest
 
 @Component
+@Profile("!local")
 class SesEmailSender(
     private val sesV2Client: SesV2Client,
     @param:Value("\${aws.ses.from-address}") private val fromAddress: String,
