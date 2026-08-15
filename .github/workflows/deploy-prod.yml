@@ -94,13 +94,18 @@ jobs:
           service: ${{ env.ECS_SERVICE }}
           wait-for-service-stability: true
 
+  notify:
+    needs: deploy
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
       - name: Compute short SHA
         id: vars
-        if: always()
         run: echo "sha=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
 
       - name: Notify Slack
-        if: always()
         uses: slackapi/slack-github-action@v2.0.0
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -109,8 +114,8 @@ jobs:
             {
               "attachments": [
                 {
-                  "color": "${{ job.status == 'success' && '#2eb886' || '#e01e5a' }}",
-                  "text": "${{ job.status == 'success' && ':white_check_mark: 프로덕션 배포 성공' || ':x: 프로덕션 배포 실패' }}\n*브랜치*: `${{ github.ref_name }}`\n*커밋*: <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ steps.vars.outputs.sha }}> by ${{ github.actor }}\n*실행 로그*: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  "color": "${{ needs.deploy.result == 'success' && '#2eb886' || '#e01e5a' }}",
+                  "text": "${{ needs.deploy.result == 'success' && ':white_check_mark: 프로덕션 배포 성공' || ':x: 프로덕션 배포 실패' }}\n*브랜치*: `${{ github.ref_name }}`\n*커밋*: <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ steps.vars.outputs.sha }}> by ${{ github.actor }}\n*실행 로그*: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                 }
               ]
             }
