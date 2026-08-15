@@ -41,5 +41,10 @@ jobs:
           webhook-type: incoming-webhook
           payload: |
             {
-              "text": "${{ job.status == 'success' && ':white_check_mark: PR 테스트 성공' || ':x: PR 테스트 실패' }}\n*PR*: <${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }}>\n*브랜치*: `${{ github.head_ref }}`\n*커밋*: <${{ github.event.pull_request.html_url }}/changes/${{ github.event.pull_request.head.sha }}|${{ steps.vars.outputs.sha }}> by ${{ github.actor }}\n*실행 로그*: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              "attachments": [
+                {
+                  "color": "${{ job.status == 'success' && '#2eb886' || '#e01e5a' }}",
+                  "text": "${{ job.status == 'success' && ':white_check_mark: PR 테스트 성공' || ':x: PR 테스트 실패' }}\n*PR*: <${{ github.event.pull_request.html_url }}|#${{ github.event.pull_request.number }}>\n*브랜치*: `${{ github.head_ref }}`\n*커밋*: <${{ github.event.pull_request.html_url }}/changes/${{ github.event.pull_request.head.sha }}|${{ steps.vars.outputs.sha }}> by ${{ github.actor }}\n*실행 로그*: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }
+              ]
             }
