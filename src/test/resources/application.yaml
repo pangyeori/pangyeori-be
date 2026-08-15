@@ -15,17 +15,10 @@ spring:
   flyway:
     enabled: false
 
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: test@gmail.com
-    password: test
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+aws:
+  region: ap-northeast-2
+  ses:
+    from-address: no-reply@pangyeori.com
 
 security:
   jwt:

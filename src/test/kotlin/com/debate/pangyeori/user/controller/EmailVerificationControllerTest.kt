@@ -102,7 +102,7 @@ class EmailVerificationControllerTest : RestDocsMvcTest() {
         emailVerificationService.sendCode(
             email = email,
         )
-        val code = requireNotNull(emailVerificationRedisRepository.findCode(email))
+        val code = emailVerificationRedisRepository.findCode(email)!!
 
         restDocs(mockMvc, "email-verification/confirm") {
             summary("이메일 인증 코드 검증")
@@ -271,7 +271,7 @@ class EmailVerificationControllerTest : RestDocsMvcTest() {
         emailVerificationService.sendCode(
             email = email,
         )
-        val code = requireNotNull(emailVerificationRedisRepository.findCode(email))
+        val code = emailVerificationRedisRepository.findCode(email)!!
         emailVerificationService.confirmCode(
             email = email,
             code = code,

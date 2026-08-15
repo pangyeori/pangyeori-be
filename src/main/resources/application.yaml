@@ -38,17 +38,10 @@ spring:
       ssl:
         enabled: ${REDIS_SSL_ENABLED:true}
 
-  mail:
-    host: ${MAIL_HOST}
-    port: ${MAIL_PORT}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+aws:
+  region: ${AWS_REGION}
+  ses:
+    from-address: ${SES_FROM_ADDRESS}
 
 management:
   endpoints:
@@ -59,8 +52,6 @@ management:
     health:
       show-details: never
   health:
-    mail:
-      enabled: false
     redis:
       enabled: false
 
