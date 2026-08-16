@@ -116,8 +116,9 @@ class EmailVerificationServiceTest : BehaviorSpec({
         }
 
         When("코드가 일치하지 않으면") {
-            Then("EmailVerificationCodeMismatchException을 던진다") {
+            Then("EmailVerificationCodeMismatchException을 던지고 시도 횟수를 증가시킨다") {
                 every { emailVerificationRedisRepository.findCode(email) } returns "123456"
+                every { emailVerificationRedisRepository.incrementAttempt(email) } returns 1L
 
                 shouldThrow<EmailVerificationCodeMismatchException> {
                     emailVerificationService.confirmCode(
@@ -125,6 +126,25 @@ class EmailVerificationServiceTest : BehaviorSpec({
                         code = "999999",
                     )
                 }
+
+                verify { emailVerificationRedisRepository.incrementAttempt(email) }
+            }
+        }
+
+        When("코드 불일치가 최대 시도 횟수에 도달하면") {
+            Then("EmailVerificationCodeMismatchException을 던지고 코드를 무효화한다") {
+                every { emailVerificationRedisRepository.findCode(email) } returns "123456"
+                every { emailVerificationRedisRepository.incrementAttempt(email) } returns 5L
+
+                shouldThrow<EmailVerificationCodeMismatchException> {
+                    emailVerificationService.confirmCode(
+                        email = email,
+                        code = "999999",
+                    )
+                }
+
+                verify { emailVerificationRedisRepository.deleteCode(email) }
+                verify { emailVerificationRedisRepository.resetAttempt(email) }
             }
         }
 
