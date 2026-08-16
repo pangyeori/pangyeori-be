@@ -16,6 +16,10 @@ class EmailVerificationRedisRepository(
         redisTemplate.opsForValue().set(codeKey(email), code, CODE_TTL)
     }
 
+    fun trySaveRateLimit(
+        email: String,
+    ): Boolean = redisTemplate.opsForValue().setIfAbsent(rateLimitKey(email), RATE_LIMIT_VALUE, RATE_LIMIT_TTL)
+
     fun findCode(
         email: String,
     ): String? = redisTemplate.opsForValue().get(codeKey(email))
@@ -50,11 +54,18 @@ class EmailVerificationRedisRepository(
         email: String,
     ) = "$VERIFIED_KEY_PREFIX$email"
 
+    private fun rateLimitKey(
+        email: String,
+    ) = "$RATE_LIMIT_KEY_PREFIX$email"
+
     companion object {
         private const val CODE_KEY_PREFIX = "email-verification:code:"
         private const val VERIFIED_KEY_PREFIX = "email-verification:verified:"
+        private const val RATE_LIMIT_KEY_PREFIX = "email-verification:rate-limit:"
         private const val VERIFIED_VALUE = "true"
+        private const val RATE_LIMIT_VALUE = "true"
         private val CODE_TTL = Duration.ofMinutes(5)
         private val VERIFIED_TTL = Duration.ofMinutes(30)
+        private val RATE_LIMIT_TTL = Duration.ofSeconds(60)
     }
 }

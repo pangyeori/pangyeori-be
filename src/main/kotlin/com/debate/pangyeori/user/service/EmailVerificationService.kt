@@ -5,6 +5,7 @@ import com.debate.pangyeori.email.exception.EmailSendFailedException
 import com.debate.pangyeori.user.exception.EmailVerificationAlreadyVerifiedException
 import com.debate.pangyeori.user.exception.EmailVerificationCodeMismatchException
 import com.debate.pangyeori.user.exception.EmailVerificationCodeNotFoundException
+import com.debate.pangyeori.user.exception.EmailVerificationRateLimitedException
 import com.debate.pangyeori.user.repository.EmailVerificationRedisRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.mail.MailException
@@ -22,6 +23,10 @@ class EmailVerificationService(
     fun sendCode(
         email: String,
     ) {
+        if (!emailVerificationRedisRepository.trySaveRateLimit(email)) {
+            throw EmailVerificationRateLimitedException()
+        }
+
         val code = generateCode()
         emailVerificationRedisRepository.saveCode(
             email = email,
