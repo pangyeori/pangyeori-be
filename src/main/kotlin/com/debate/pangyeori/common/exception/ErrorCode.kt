@@ -28,6 +28,7 @@ enum class ErrorCode(
     EMAIL_VERIFICATION_CODE_MISMATCH(HttpStatus.UNPROCESSABLE_ENTITY, "인증 코드가 일치하지 않습니다."),
     EMAIL_VERIFICATION_ALREADY_VERIFIED(HttpStatus.CONFLICT, "이미 인증이 완료된 이메일입니다."),
     EMAIL_SEND_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요."),
+    EMAIL_VERIFICATION_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "인증 코드는 60초마다 한 번만 요청할 수 있습니다."),
 
     // 공통
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),

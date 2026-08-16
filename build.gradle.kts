@@ -42,8 +42,8 @@ dependencies {
     // Actuator
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
-    // AWS SES
-    implementation("software.amazon.awssdk:sesv2:2.46.7")
+    // Mail
+    implementation("org.springframework.boot:spring-boot-starter-mail")
 
     // JPA
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
