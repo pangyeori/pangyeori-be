@@ -41,6 +41,36 @@ class EmailVerificationControllerTest : RestDocsMvcTest() {
     }
 
     @Test
+    fun `인증 코드 요청이 너무 잦으면 429를 반환한다`() {
+        val email = "rate-limited@pangyeori.com"
+        emailVerificationService.sendCode(
+            email = email,
+        )
+
+        restDocs(mockMvc, "email-verification/send-rate-limited") {
+            summary("이메일 인증 코드 발송")
+            request {
+                post("/api/v1/email-verifications")
+                body {
+                    field("email", email, "인증 코드를 받을 이메일")
+                }
+            }
+            response {
+                status(429)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "에러 정보") {
+                        field("code", "에러 코드")
+                        field("message", "에러 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun `이메일 형식이 올바르지 않으면 400을 반환한다`() {
         restDocs(mockMvc, "email-verification/send-invalid-email") {
             summary("이메일 인증 코드 발송")

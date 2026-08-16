@@ -5,6 +5,7 @@ import com.debate.pangyeori.email.exception.EmailSendFailedException
 import com.debate.pangyeori.user.exception.EmailVerificationAlreadyVerifiedException
 import com.debate.pangyeori.user.exception.EmailVerificationCodeMismatchException
 import com.debate.pangyeori.user.exception.EmailVerificationCodeNotFoundException
+import com.debate.pangyeori.user.exception.EmailVerificationRateLimitedException
 import com.debate.pangyeori.user.repository.EmailVerificationRedisRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
@@ -30,6 +31,10 @@ class EmailVerificationServiceTest : BehaviorSpec({
     Given("이메일 인증 코드 발송 요청이 오면") {
         When("sendCode를 호출하면") {
             Then("6자리 코드를 생성해 저장하고 이메일로 발송한다") {
+                every {
+                    emailVerificationRedisRepository.trySaveRateLimit(email)
+                } returns true
+
                 val codeSlot = slot<String>()
                 every {
                     emailVerificationRedisRepository.saveCode(
@@ -62,6 +67,9 @@ class EmailVerificationServiceTest : BehaviorSpec({
         When("이메일 발송이 재시도 후에도 계속 실패하면") {
             Then("EmailSendFailedException을 던진다") {
                 every {
+                    emailVerificationRedisRepository.trySaveRateLimit(email)
+                } returns true
+                every {
                     emailSender.send(
                         to = email,
                         subject = any(),
@@ -70,6 +78,20 @@ class EmailVerificationServiceTest : BehaviorSpec({
                 } throws MailSendException("발송 실패")
 
                 shouldThrow<EmailSendFailedException> {
+                    emailVerificationService.sendCode(
+                        email = email,
+                    )
+                }
+            }
+        }
+
+        When("이미 발송 요청을 처리한 이메일로 다시 요청하면") {
+            Then("EmailVerificationRateLimitedException을 던진다") {
+                every {
+                    emailVerificationRedisRepository.trySaveRateLimit(email)
+                } returns false
+
+                shouldThrow<EmailVerificationRateLimitedException> {
                     emailVerificationService.sendCode(
                         email = email,
                     )
