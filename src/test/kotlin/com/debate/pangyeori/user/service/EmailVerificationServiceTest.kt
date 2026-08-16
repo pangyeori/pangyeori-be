@@ -10,7 +10,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.string.shouldMatch
 import io.mockk.*
-import software.amazon.awssdk.core.exception.SdkException
+import org.springframework.mail.MailSendException
 
 class EmailVerificationServiceTest : BehaviorSpec({
 
@@ -67,7 +67,7 @@ class EmailVerificationServiceTest : BehaviorSpec({
                         subject = any(),
                         content = any(),
                     )
-                } throws SdkException.create("발송 실패", null)
+                } throws MailSendException("발송 실패")
 
                 shouldThrow<EmailSendFailedException> {
                     emailVerificationService.sendCode(

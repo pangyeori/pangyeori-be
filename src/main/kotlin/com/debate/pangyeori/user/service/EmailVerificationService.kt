@@ -7,8 +7,8 @@ import com.debate.pangyeori.user.exception.EmailVerificationCodeMismatchExceptio
 import com.debate.pangyeori.user.exception.EmailVerificationCodeNotFoundException
 import com.debate.pangyeori.user.repository.EmailVerificationRedisRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.mail.MailException
 import org.springframework.stereotype.Service
-import software.amazon.awssdk.core.exception.SdkException
 import java.security.SecureRandom
 
 @Service
@@ -33,7 +33,7 @@ class EmailVerificationService(
                 subject = MAIL_SUBJECT,
                 content = "인증 코드: $code",
             )
-        } catch (e: SdkException) {
+        } catch (e: MailException) {
             logger.warn(e) { "이메일 발송 재시도 초과로 발송에 실패했습니다. email=${maskEmail(email)}" }
             throw EmailSendFailedException()
         }
