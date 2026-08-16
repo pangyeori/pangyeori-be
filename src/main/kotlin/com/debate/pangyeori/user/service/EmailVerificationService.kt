@@ -32,6 +32,7 @@ class EmailVerificationService(
             email = email,
             code = code,
         )
+        emailVerificationRedisRepository.resetAttempt(email)
         try {
             emailSender.send(
                 to = email,
@@ -57,10 +58,16 @@ class EmailVerificationService(
             ?: throw EmailVerificationCodeNotFoundException()
 
         if (savedCode != code) {
+            val attempts = emailVerificationRedisRepository.incrementAttempt(email)
+            if (attempts >= MAX_CONFIRM_ATTEMPTS) {
+                emailVerificationRedisRepository.deleteCode(email)
+                emailVerificationRedisRepository.resetAttempt(email)
+            }
             throw EmailVerificationCodeMismatchException()
         }
 
         emailVerificationRedisRepository.deleteCode(email)
+        emailVerificationRedisRepository.resetAttempt(email)
         emailVerificationRedisRepository.markVerified(email)
         logger.info { "이메일 인증 완료. email=${maskEmail(email)}" }
     }
@@ -84,6 +91,7 @@ class EmailVerificationService(
         private const val MAIL_SUBJECT = "[Pangyeori] 이메일 인증 코드"
         private const val CODE_LENGTH = 6
         private const val CODE_UPPER_BOUND = 1_000_000
+        private const val MAX_CONFIRM_ATTEMPTS = 5L
         private const val EMAIL_MASK_VISIBLE_LENGTH = 2
         private const val MASKED_EMAIL_FALLBACK = "***"
         private val SECURE_RANDOM = SecureRandom()
