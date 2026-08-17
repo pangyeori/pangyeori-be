@@ -4,6 +4,7 @@ import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.exception.EmailAlreadyExistsException
 import com.debate.pangyeori.user.exception.EmailNotVerifiedException
 import com.debate.pangyeori.user.exception.NicknameAlreadyExistsException
+import com.debate.pangyeori.user.exception.UserNotFoundException
 import com.debate.pangyeori.user.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.user.repository.UserRepository
 import com.navercorp.fixturemonkey.FixtureMonkey
@@ -206,6 +207,48 @@ class UserServiceTest : BehaviorSpec({
                 )
 
                 response.duplicated shouldBe false
+            }
+        }
+    }
+
+    Given("로그인한 사용자가 내 정보를 조회하면") {
+        When("사용자가 존재하면") {
+            Then("비밀번호를 제외한 사용자 정보를 반환한다") {
+                val user = fixtureMonkey.giveMeKotlinBuilder<User>()
+                    .set(User::id, "0000000000001")
+                    .set(User::email, email)
+                    .set(User::nickname, nickname)
+                    .sample()
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user
+
+                val response = userService.getMyInfo(
+                    email = email,
+                )
+
+                response.id shouldBe user.id
+                response.email shouldBe user.email
+                response.nickname shouldBe user.nickname
+                response.profileImageUrl shouldBe user.profileImageUrl
+            }
+        }
+
+        When("사용자가 존재하지 않으면") {
+            Then("UserNotFoundException을 던진다") {
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns null
+
+                shouldThrow<UserNotFoundException> {
+                    userService.getMyInfo(
+                        email = email,
+                    )
+                }
             }
         }
     }
