@@ -5,8 +5,10 @@ import com.debate.pangyeori.support.dsl.restDocs
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.user.repository.UserRepository
+import com.debate.pangyeori.user.service.UserAuthService
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.security.crypto.password.PasswordEncoder
 
 class UserControllerTest : RestDocsMvcTest() {
     @Autowired
@@ -14,6 +16,75 @@ class UserControllerTest : RestDocsMvcTest() {
 
     @Autowired
     private lateinit var emailVerificationRedisRepository: EmailVerificationRedisRepository
+
+    @Autowired
+    private lateinit var passwordEncoder: PasswordEncoder
+
+    @Autowired
+    private lateinit var userAuthService: UserAuthService
+
+    @Test
+    fun `로그인한 사용자가 내 정보를 조회한다`() {
+        val email = "mypage@pangyeori.com"
+        val password = "password123!"
+        userRepository.save(
+            User.create(
+                email = email,
+                password = passwordEncoder.encode(password)!!,
+                nickname = "마이페이지사용자",
+                profileImageUrl = "https://example.com/profile.png",
+            ),
+        )
+        val accessToken = userAuthService.signIn(
+            email = email,
+            password = password,
+        ).accessToken
+
+        restDocs(mockMvc, "users/get-my-info") {
+            summary("내 정보 조회")
+            tag("Users")
+            request {
+                get("/api/v1/users/me")
+                header("Authorization", "Bearer $accessToken")
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "로그인한 사용자 정보") {
+                        field("id", "사용자 ID")
+                        field("email", "사용자 이메일")
+                        field("nickname", "사용자 닉네임")
+                        field("profileImageUrl", "프로필 이미지 URL").optional()
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `인증 정보 없이 내 정보를 조회하면 401을 반환한다`() {
+        restDocs(mockMvc, "users/get-my-info-unauthorized") {
+            summary("내 정보 조회")
+            tag("Users")
+            request {
+                get("/api/v1/users/me")
+            }
+            response {
+                status(401)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     fun `회원가입에 성공한다`() {
