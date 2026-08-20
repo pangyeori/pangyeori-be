@@ -1,5 +1,6 @@
 package com.debate.pangyeori.user.service
 
+import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.dto.response.NicknameDuplicateResponse
 import com.debate.pangyeori.user.dto.response.UserResponse
@@ -7,7 +8,6 @@ import com.debate.pangyeori.user.exception.EmailAlreadyExistsException
 import com.debate.pangyeori.user.exception.EmailNotVerifiedException
 import com.debate.pangyeori.user.exception.NicknameAlreadyExistsException
 import com.debate.pangyeori.user.exception.UserNotFoundException
-import com.debate.pangyeori.user.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.user.repository.UserRepository
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service

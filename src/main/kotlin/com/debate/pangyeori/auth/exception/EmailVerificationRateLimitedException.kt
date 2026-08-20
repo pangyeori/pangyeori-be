@@ -1,0 +1,8 @@
+package com.debate.pangyeori.auth.exception
+
+import com.debate.pangyeori.common.exception.BusinessException
+import com.debate.pangyeori.common.exception.ErrorCode
+
+class EmailVerificationRateLimitedException : BusinessException(
+    errorCode = ErrorCode.EMAIL_VERIFICATION_RATE_LIMITED,
+)

@@ -1,11 +1,11 @@
 package com.debate.pangyeori.user.service
 
+import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.exception.EmailAlreadyExistsException
 import com.debate.pangyeori.user.exception.EmailNotVerifiedException
 import com.debate.pangyeori.user.exception.NicknameAlreadyExistsException
 import com.debate.pangyeori.user.exception.UserNotFoundException
-import com.debate.pangyeori.user.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.user.repository.UserRepository
 import com.navercorp.fixturemonkey.FixtureMonkey
 import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
