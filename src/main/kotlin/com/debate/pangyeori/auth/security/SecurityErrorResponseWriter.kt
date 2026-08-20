@@ -1,4 +1,4 @@
-package com.debate.pangyeori.user.security
+package com.debate.pangyeori.auth.security
 
 import com.debate.pangyeori.common.dto.ApiError
 import com.debate.pangyeori.common.dto.ApiResponse

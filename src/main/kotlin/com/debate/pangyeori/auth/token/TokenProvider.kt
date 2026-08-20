@@ -1,4 +1,4 @@
-package com.debate.pangyeori.user.token
+package com.debate.pangyeori.auth.token
 
 import com.debate.pangyeori.user.domain.User
 

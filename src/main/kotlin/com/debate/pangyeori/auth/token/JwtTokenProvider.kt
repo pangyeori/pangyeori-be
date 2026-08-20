@@ -1,8 +1,8 @@
-package com.debate.pangyeori.user.token
+package com.debate.pangyeori.auth.token
 
+import com.debate.pangyeori.auth.exception.ExpiredTokenException
+import com.debate.pangyeori.auth.exception.InvalidTokenException
 import com.debate.pangyeori.user.domain.User
-import com.debate.pangyeori.user.exception.ExpiredTokenException
-import com.debate.pangyeori.user.exception.InvalidTokenException
 import io.hypersistence.tsid.TSID
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm

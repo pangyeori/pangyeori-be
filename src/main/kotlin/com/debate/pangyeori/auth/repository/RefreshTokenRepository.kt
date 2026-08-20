@@ -1,6 +1,6 @@
-package com.debate.pangyeori.user.repository
+package com.debate.pangyeori.auth.repository
 
-import com.debate.pangyeori.user.domain.RefreshToken
+import com.debate.pangyeori.auth.domain.RefreshToken
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock

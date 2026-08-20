@@ -1,8 +1,8 @@
 package com.debate.pangyeori.config
 
-import com.debate.pangyeori.user.security.JwtAuthenticationFilter
-import com.debate.pangyeori.user.security.RestAccessDeniedHandler
-import com.debate.pangyeori.user.security.RestAuthenticationEntryPoint
+import com.debate.pangyeori.auth.security.JwtAuthenticationFilter
+import com.debate.pangyeori.auth.security.RestAccessDeniedHandler
+import com.debate.pangyeori.auth.security.RestAuthenticationEntryPoint
 import com.nimbusds.jose.jwk.source.ImmutableSecret
 import com.nimbusds.jose.proc.SecurityContext
 import org.springframework.beans.factory.annotation.Value
@@ -112,9 +112,9 @@ class SecurityConfig {
         private val PUBLIC_POST_PATHS = arrayOf(
             "/api/v1/email-verifications/**",
             "/api/v1/users",
-            "/api/v1/users/signin",
-            "/api/v1/users/refresh",
-            "/api/v1/users/signout",
+            "/api/v1/auth/signin",
+            "/api/v1/auth/refresh",
+            "/api/v1/auth/signout",
         )
 
         private const val CORS_PATH_PATTERN = "/api/**"

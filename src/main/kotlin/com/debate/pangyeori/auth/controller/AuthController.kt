@@ -1,11 +1,11 @@
-package com.debate.pangyeori.user.controller
+package com.debate.pangyeori.auth.controller
 
+import com.debate.pangyeori.auth.dto.request.SignInRequest
+import com.debate.pangyeori.auth.dto.response.SignInResponse
+import com.debate.pangyeori.auth.exception.InvalidTokenException
+import com.debate.pangyeori.auth.service.AuthService
+import com.debate.pangyeori.auth.token.RefreshTokenCookieProvider
 import com.debate.pangyeori.common.dto.ApiResponse
-import com.debate.pangyeori.user.dto.request.SignInRequest
-import com.debate.pangyeori.user.dto.response.SignInResponse
-import com.debate.pangyeori.user.exception.InvalidTokenException
-import com.debate.pangyeori.user.service.UserAuthService
-import com.debate.pangyeori.user.token.RefreshTokenCookieProvider
 import jakarta.validation.Valid
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
@@ -16,9 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/api/v1/users")
-class UserAuthController(
-    private val userAuthService: UserAuthService,
+@RequestMapping("/api/v1/auth")
+class AuthController(
+    private val authService: AuthService,
     private val refreshTokenCookieProvider: RefreshTokenCookieProvider,
 ) {
 
@@ -26,7 +26,7 @@ class UserAuthController(
     fun signIn(
         @RequestBody @Valid request: SignInRequest,
     ): ResponseEntity<ApiResponse<SignInResponse>> {
-        val response = userAuthService.signIn(
+        val response = authService.signIn(
             email = request.email!!,
             password = request.password!!,
         )
@@ -54,7 +54,7 @@ class UserAuthController(
         )
         refreshToken: String?,
     ): ResponseEntity<ApiResponse<SignInResponse>> {
-        val response = userAuthService.refresh(
+        val response = authService.refresh(
             refreshToken = refreshToken ?: throw InvalidTokenException(),
         )
 
@@ -82,7 +82,7 @@ class UserAuthController(
         refreshToken: String?,
     ): ResponseEntity<Void> {
         if (refreshToken != null) {
-            userAuthService.logout(
+            authService.logout(
                 refreshToken = refreshToken,
             )
         }

@@ -1,6 +1,7 @@
-package com.debate.pangyeori.user.domain
+package com.debate.pangyeori.auth.domain
 
 import com.debate.pangyeori.common.entity.BaseEntity
+import com.debate.pangyeori.user.domain.User
 import io.hypersistence.utils.hibernate.id.Tsid
 import jakarta.persistence.Column
 import jakarta.persistence.ConstraintMode

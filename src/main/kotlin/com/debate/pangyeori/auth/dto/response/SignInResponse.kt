@@ -1,4 +1,4 @@
-package com.debate.pangyeori.user.dto.response
+package com.debate.pangyeori.auth.dto.response
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 

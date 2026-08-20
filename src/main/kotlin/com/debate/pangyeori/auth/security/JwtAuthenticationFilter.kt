@@ -1,11 +1,11 @@
-package com.debate.pangyeori.user.security
+package com.debate.pangyeori.auth.security
 
+import com.debate.pangyeori.auth.exception.ExpiredTokenException
+import com.debate.pangyeori.auth.exception.InvalidTokenException
+import com.debate.pangyeori.auth.token.TokenProvider
 import com.debate.pangyeori.common.exception.ErrorCode
 import com.debate.pangyeori.user.domain.enums.UserStatus
-import com.debate.pangyeori.user.exception.ExpiredTokenException
-import com.debate.pangyeori.user.exception.InvalidTokenException
 import com.debate.pangyeori.user.repository.UserRepository
-import com.debate.pangyeori.user.token.TokenProvider
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse

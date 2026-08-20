@@ -1,20 +1,20 @@
-package com.debate.pangyeori.user.service
+package com.debate.pangyeori.auth.service
 
-import com.debate.pangyeori.user.domain.RefreshToken
+import com.debate.pangyeori.auth.domain.RefreshToken
+import com.debate.pangyeori.auth.dto.response.SignInResponse
+import com.debate.pangyeori.auth.exception.InvalidCredentialsException
+import com.debate.pangyeori.auth.exception.InvalidTokenException
+import com.debate.pangyeori.auth.repository.RefreshTokenRepository
+import com.debate.pangyeori.auth.token.TokenProvider
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.domain.enums.UserStatus
-import com.debate.pangyeori.user.dto.response.SignInResponse
-import com.debate.pangyeori.user.exception.InvalidCredentialsException
-import com.debate.pangyeori.user.exception.InvalidTokenException
-import com.debate.pangyeori.user.repository.RefreshTokenRepository
 import com.debate.pangyeori.user.repository.UserRepository
-import com.debate.pangyeori.user.token.TokenProvider
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class UserAuthService(
+class AuthService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
     private val tokenProvider: TokenProvider,

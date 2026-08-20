@@ -1,4 +1,4 @@
-package com.debate.pangyeori.user.token
+package com.debate.pangyeori.auth.token
 
 import org.springframework.http.ResponseCookie
 import org.springframework.stereotype.Component
@@ -33,6 +33,6 @@ class RefreshTokenCookieProvider {
     companion object {
         const val COOKIE_NAME = "refreshToken"
         private const val SAME_SITE = "Lax"
-        private const val COOKIE_PATH = "/api/v1/users"
+        private const val COOKIE_PATH = "/api/v1/auth"
     }
 }
