@@ -1,14 +1,14 @@
-package com.debate.pangyeori.user.service
+package com.debate.pangyeori.auth.service
 
-import com.debate.pangyeori.user.domain.RefreshToken
+import com.debate.pangyeori.auth.domain.RefreshToken
+import com.debate.pangyeori.auth.exception.InvalidCredentialsException
+import com.debate.pangyeori.auth.exception.InvalidTokenException
+import com.debate.pangyeori.auth.repository.RefreshTokenRepository
+import com.debate.pangyeori.auth.token.TokenProvider
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.domain.enums.UserRole
 import com.debate.pangyeori.user.domain.enums.UserStatus
-import com.debate.pangyeori.user.exception.InvalidCredentialsException
-import com.debate.pangyeori.user.exception.InvalidTokenException
-import com.debate.pangyeori.user.repository.RefreshTokenRepository
 import com.debate.pangyeori.user.repository.UserRepository
-import com.debate.pangyeori.user.token.TokenProvider
 import com.navercorp.fixturemonkey.FixtureMonkey
 import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
 import com.navercorp.fixturemonkey.kotlin.giveMeKotlinBuilder
@@ -22,13 +22,13 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.springframework.security.crypto.password.PasswordEncoder
 
-class UserAuthServiceTest : BehaviorSpec({
+class AuthServiceTest : BehaviorSpec({
     val userRepository = mockk<UserRepository>()
     val passwordEncoder = mockk<PasswordEncoder>()
     val tokenProvider = mockk<TokenProvider>()
     val refreshTokenRepository = mockk<RefreshTokenRepository>()
 
-    val userAuthService = UserAuthService(
+    val authService = AuthService(
         userRepository = userRepository,
         passwordEncoder = passwordEncoder,
         tokenProvider = tokenProvider,
@@ -88,7 +88,7 @@ class UserAuthServiceTest : BehaviorSpec({
                     refreshTokenRepository.save(any())
                 } answers { firstArg() }
 
-                val response = userAuthService.signIn(
+                val response = authService.signIn(
                     email = email,
                     password = password,
                 )
@@ -119,7 +119,7 @@ class UserAuthServiceTest : BehaviorSpec({
                 } returns false
 
                 shouldThrow<InvalidCredentialsException> {
-                    userAuthService.signIn(
+                    authService.signIn(
                         email = email,
                         password = password,
                     )
@@ -161,7 +161,7 @@ class UserAuthServiceTest : BehaviorSpec({
                     refreshTokenRepository.save(any())
                 } answers { firstArg() }
 
-                val response = userAuthService.refresh(
+                val response = authService.refresh(
                     refreshToken = refreshToken,
                 )
 
@@ -194,7 +194,7 @@ class UserAuthServiceTest : BehaviorSpec({
                 } returns null
 
                 shouldThrow<InvalidTokenException> {
-                    userAuthService.refresh(
+                    authService.refresh(
                         refreshToken = refreshToken,
                     )
                 }

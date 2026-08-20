@@ -1,11 +1,11 @@
 package com.debate.pangyeori.user.controller
 
+import com.debate.pangyeori.auth.service.AuthService
 import com.debate.pangyeori.support.RestDocsMvcTest
 import com.debate.pangyeori.support.dsl.restDocs
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.user.repository.UserRepository
-import com.debate.pangyeori.user.service.UserAuthService
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -21,7 +21,7 @@ class UserControllerTest : RestDocsMvcTest() {
     private lateinit var passwordEncoder: PasswordEncoder
 
     @Autowired
-    private lateinit var userAuthService: UserAuthService
+    private lateinit var authService: AuthService
 
     @Test
     fun `로그인한 사용자가 내 정보를 조회한다`() {
@@ -35,7 +35,7 @@ class UserControllerTest : RestDocsMvcTest() {
                 profileImageUrl = "https://example.com/profile.png",
             ),
         )
-        val accessToken = userAuthService.signIn(
+        val accessToken = authService.signIn(
             email = email,
             password = password,
         ).accessToken
