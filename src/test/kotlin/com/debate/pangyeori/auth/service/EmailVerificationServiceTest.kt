@@ -1,12 +1,12 @@
-package com.debate.pangyeori.user.service
+package com.debate.pangyeori.auth.service
 
+import com.debate.pangyeori.auth.exception.EmailVerificationAlreadyVerifiedException
+import com.debate.pangyeori.auth.exception.EmailVerificationCodeMismatchException
+import com.debate.pangyeori.auth.exception.EmailVerificationCodeNotFoundException
+import com.debate.pangyeori.auth.exception.EmailVerificationRateLimitedException
+import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.email.EmailSender
 import com.debate.pangyeori.email.exception.EmailSendFailedException
-import com.debate.pangyeori.user.exception.EmailVerificationAlreadyVerifiedException
-import com.debate.pangyeori.user.exception.EmailVerificationCodeMismatchException
-import com.debate.pangyeori.user.exception.EmailVerificationCodeNotFoundException
-import com.debate.pangyeori.user.exception.EmailVerificationRateLimitedException
-import com.debate.pangyeori.user.repository.EmailVerificationRedisRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.string.shouldMatch
