@@ -1,4 +1,4 @@
-package com.debate.pangyeori.user.repository
+package com.debate.pangyeori.auth.repository
 
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Repository
