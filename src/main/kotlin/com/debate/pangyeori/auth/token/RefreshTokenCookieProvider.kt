@@ -1,17 +1,21 @@
 package com.debate.pangyeori.auth.token
 
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseCookie
 import org.springframework.stereotype.Component
+import java.time.Duration
 
 @Component
-class RefreshTokenCookieProvider {
+class RefreshTokenCookieProvider(
+    @param:Value("\${security.jwt.refresh-token-expiration:14d}")
+    private val refreshTokenExpiration: Duration,
+) {
 
     fun issue(
         refreshToken: String,
-        maxAgeSeconds: Long,
     ): ResponseCookie = build(
         value = refreshToken,
-        maxAgeSeconds = maxAgeSeconds,
+        maxAgeSeconds = refreshTokenExpiration.seconds,
     )
 
     fun clear(): ResponseCookie = build(

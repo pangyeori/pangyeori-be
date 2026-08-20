@@ -83,8 +83,6 @@ class AuthService(
         return SignInResponse(
             accessToken = tokens.accessToken,
             refreshToken = tokens.refreshToken,
-            accessTokenExpiresIn = tokens.accessTokenExpiresIn,
-            refreshTokenExpiresIn = tokens.refreshTokenExpiresIn,
         )
     }
 

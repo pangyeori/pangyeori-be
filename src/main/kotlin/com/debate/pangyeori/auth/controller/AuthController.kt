@@ -36,7 +36,6 @@ class AuthController(
                 HttpHeaders.SET_COOKIE,
                 refreshTokenCookieProvider.issue(
                     refreshToken = response.refreshToken,
-                    maxAgeSeconds = response.refreshTokenExpiresIn,
                 ).toString(),
             )
             .body(
@@ -63,7 +62,6 @@ class AuthController(
                 HttpHeaders.SET_COOKIE,
                 refreshTokenCookieProvider.issue(
                     refreshToken = response.refreshToken,
-                    maxAgeSeconds = response.refreshTokenExpiresIn,
                 ).toString(),
             )
             .body(
