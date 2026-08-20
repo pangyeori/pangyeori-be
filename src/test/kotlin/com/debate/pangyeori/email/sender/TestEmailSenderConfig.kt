@@ -1,4 +1,4 @@
-package com.debate.pangyeori.email
+package com.debate.pangyeori.email.sender
 
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean

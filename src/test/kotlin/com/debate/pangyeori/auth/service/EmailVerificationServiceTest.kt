@@ -5,7 +5,7 @@ import com.debate.pangyeori.auth.exception.EmailVerificationCodeMismatchExceptio
 import com.debate.pangyeori.auth.exception.EmailVerificationCodeNotFoundException
 import com.debate.pangyeori.auth.exception.EmailVerificationRateLimitedException
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
-import com.debate.pangyeori.email.EmailSender
+import com.debate.pangyeori.email.sender.EmailSender
 import com.debate.pangyeori.email.exception.EmailSendFailedException
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec

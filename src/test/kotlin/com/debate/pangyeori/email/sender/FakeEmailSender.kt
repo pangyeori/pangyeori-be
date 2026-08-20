@@ -1,4 +1,4 @@
-package com.debate.pangyeori.email
+package com.debate.pangyeori.email.sender
 
 class FakeEmailSender : EmailSender {
 
