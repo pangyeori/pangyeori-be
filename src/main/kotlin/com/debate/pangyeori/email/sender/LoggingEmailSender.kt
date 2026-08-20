@@ -1,4 +1,4 @@
-package com.debate.pangyeori.email
+package com.debate.pangyeori.email.sender
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.context.annotation.Profile

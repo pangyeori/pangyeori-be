@@ -1,4 +1,4 @@
-package com.debate.pangyeori.email
+package com.debate.pangyeori.email.sender
 
 import org.springframework.context.annotation.Profile
 import org.springframework.mail.MailException
