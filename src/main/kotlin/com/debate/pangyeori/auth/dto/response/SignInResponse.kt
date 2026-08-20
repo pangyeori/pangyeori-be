@@ -7,6 +7,4 @@ data class SignInResponse(
     @get:JsonIgnore
     val refreshToken: String,
     val tokenType: String = "Bearer",
-    val accessTokenExpiresIn: Long,
-    val refreshTokenExpiresIn: Long,
 )
