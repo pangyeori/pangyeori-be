@@ -21,7 +21,7 @@ class AuthControllerTest : RestDocsMvcTest() {
     private lateinit var authService: AuthService
 
     @Test
-    fun `signin에 성공하면 access token과 refresh token을 반환한다`() {
+    fun `signin에 성공하면 access token을 반환하고 refresh token 쿠키를 발급한다`() {
         userRepository.save(
             User.create(
                 email = "signin@pangyeori.com",
@@ -49,8 +49,6 @@ class AuthControllerTest : RestDocsMvcTest() {
                     obj("data", "발급된 인증 토큰") {
                         field("accessToken", "API 인증에 사용하는 Access Token")
                         field("tokenType", "인증 헤더 타입")
-                        field("accessTokenExpiresIn", "Access Token 만료 시간(초)")
-                        field("refreshTokenExpiresIn", "Refresh Token 만료 시간(초)")
                     }
                     field("error", "오류 정보").optional()
                 }
@@ -155,8 +153,6 @@ class AuthControllerTest : RestDocsMvcTest() {
                     obj("data", "재발급된 인증 토큰") {
                         field("accessToken", "API 인증에 사용하는 Access Token")
                         field("tokenType", "인증 헤더 타입")
-                        field("accessTokenExpiresIn", "Access Token 만료 시간(초)")
-                        field("refreshTokenExpiresIn", "Refresh Token 만료 시간(초)")
                     }
                     field("error", "오류 정보").optional()
                 }
