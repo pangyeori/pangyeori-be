@@ -1,8 +1,11 @@
 package com.debate.pangyeori.support.dsl
 
+import org.springframework.restdocs.operation.preprocess.OperationPreprocessor
+import org.springframework.restdocs.operation.preprocess.Preprocessors.replacePattern
 import org.springframework.restdocs.payload.FieldDescriptor
 import org.springframework.restdocs.payload.JsonFieldType
 import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
+import java.util.regex.Pattern
 
 /**
  * JSON 응답 바디를 필드 단위로 문서화하는 DSL.
@@ -49,6 +52,8 @@ class ResponseBodyDsl(private val prefix: String = "") {
     }
 
     internal fun descriptors(): List<FieldDescriptor> = fieldBuilders.map { it.build() }
+
+    internal fun maskPreprocessors(): List<OperationPreprocessor> = fieldBuilders.mapNotNull { it.maskPreprocessor() }
 }
 
 /**
@@ -57,6 +62,7 @@ class ResponseBodyDsl(private val prefix: String = "") {
  * `optional()`을 호출하면 실제 응답에 해당 필드가 없어도 REST Docs 검증이 통과된다.
  * 반대로 `optional()`이 없는 필드가 응답에 누락되면 테스트가 실패한다.
  * `type()`으로 필드 타입을 명시하면 생성된 스니펫 문서에 타입 정보가 포함된다.
+ * `mask()`를 호출하면 실제 응답 값과 테스트 assertion에는 영향을 주지 않고 스니펫에서만 값을 `replacement`로 치환한다.
  */
 class ResponseFieldBuilder internal constructor(
     private val path: String,
@@ -64,10 +70,21 @@ class ResponseFieldBuilder internal constructor(
     private var optional: Boolean,
     private var type: JsonFieldType,
 ) {
+    private var maskReplacement: String? = null
+
     fun optional(): ResponseFieldBuilder = apply { optional = true }
     fun type(jsonFieldType: JsonFieldType): ResponseFieldBuilder = apply { type = jsonFieldType }
+    fun mask(replacement: String): ResponseFieldBuilder = apply { maskReplacement = replacement }
 
     internal fun build(): FieldDescriptor =
         fieldWithPath(path).description(description).type(type)
             .let { if (optional) it.optional() else it }
+
+    internal fun maskPreprocessor(): OperationPreprocessor? = maskReplacement?.let { replacement ->
+        val key = path.substringAfterLast('.')
+        replacePattern(
+            Pattern.compile("\"$key\"\\s*:\\s*\"[^\"]*\""),
+            "\"$key\":\"$replacement\"",
+        )
+    }
 }

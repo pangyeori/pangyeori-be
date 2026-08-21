@@ -1,6 +1,7 @@
 package com.debate.pangyeori.auth.repository
 
 import com.debate.pangyeori.auth.domain.RefreshToken
+import com.debate.pangyeori.user.domain.User
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
@@ -14,4 +15,8 @@ interface RefreshTokenRepository : JpaRepository<RefreshToken, String> {
     fun findByTokenHashForUpdate(
         @Param("tokenHash") tokenHash: String,
     ): RefreshToken?
+
+    fun findAllByUserAndRevokedAtIsNull(
+        user: User,
+    ): List<RefreshToken>
 }
