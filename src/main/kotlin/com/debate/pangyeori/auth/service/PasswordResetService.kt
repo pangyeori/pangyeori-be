@@ -5,6 +5,7 @@ import com.debate.pangyeori.auth.exception.PasswordResetTokenNotFoundException
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.auth.repository.PasswordResetRedisRepository
 import com.debate.pangyeori.auth.repository.RefreshTokenRepository
+import com.debate.pangyeori.common.util.maskEmail
 import com.debate.pangyeori.user.exception.EmailNotVerifiedException
 import com.debate.pangyeori.user.exception.UserNotFoundException
 import com.debate.pangyeori.user.repository.UserRepository
@@ -53,7 +54,7 @@ class PasswordResetService(
         emailVerificationRedisRepository.clearVerified(
             email = normalizedEmail,
         )
-        logger.info { "비밀번호 재설정 토큰 발급 완료. email=${maskEmail(normalizedEmail)}" }
+        logger.info { "비밀번호 재설정 토큰 발급 완료. email=${normalizedEmail.maskEmail()}" }
 
         return PasswordResetResponse(
             passwordResetToken = token,
@@ -93,23 +94,8 @@ class PasswordResetService(
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
     }
 
-    private fun maskEmail(
-        email: String,
-    ): String {
-        val atIndex = email.indexOf('@')
-        if (atIndex <= 0) return MASKED_EMAIL_FALLBACK
-
-        val localPart = email.substring(0, atIndex)
-        val domain = email.substring(atIndex)
-        val visibleLength = minOf(EMAIL_MASK_VISIBLE_LENGTH, localPart.length)
-
-        return localPart.take(visibleLength) + "*".repeat(localPart.length - visibleLength) + domain
-    }
-
     companion object {
         private const val TOKEN_BYTE_LENGTH = 32
-        private const val EMAIL_MASK_VISIBLE_LENGTH = 2
-        private const val MASKED_EMAIL_FALLBACK = "***"
         private val SECURE_RANDOM = SecureRandom()
     }
 }
