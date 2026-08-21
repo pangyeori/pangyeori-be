@@ -31,7 +31,7 @@ class User private constructor(
     val email: String,
 
     @Column(name = "password", nullable = false, length = 255)
-    val password: String,
+    var password: String,
 
     @Column(nullable = false, length = 50)
     val nickname: String,
@@ -47,6 +47,12 @@ class User private constructor(
     @Column(nullable = false, length = 20)
     val status: UserStatus,
 ) : BaseEntity() {
+    fun changePassword(
+        newPassword: String,
+    ) {
+        password = newPassword
+    }
+
     companion object {
         fun create(
             email: String,

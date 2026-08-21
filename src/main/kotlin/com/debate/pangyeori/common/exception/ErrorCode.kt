@@ -30,6 +30,9 @@ enum class ErrorCode(
     EMAIL_SEND_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요."),
     EMAIL_VERIFICATION_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "인증 코드는 60초마다 한 번만 요청할 수 있습니다."),
 
+    // 비밀번호 재설정
+    PASSWORD_RESET_TOKEN_NOT_FOUND(HttpStatus.UNPROCESSABLE_ENTITY, "재설정 토큰이 존재하지 않거나 만료되었습니다."),
+
     // 공통
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."),
