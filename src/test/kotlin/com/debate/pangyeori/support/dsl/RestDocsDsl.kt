@@ -10,6 +10,7 @@ import org.springframework.restdocs.operation.OperationRequest
 import org.springframework.restdocs.operation.OperationResponse
 import org.springframework.restdocs.operation.OperationResponseFactory
 import org.springframework.restdocs.operation.preprocess.OperationPreprocessor
+import org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessRequest
 import org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessResponse
 import org.springframework.restdocs.operation.preprocess.Preprocessors.replacePattern
 import org.springframework.restdocs.payload.PayloadDocumentation
@@ -83,6 +84,8 @@ class RestDocsDsl(
     internal fun execute(): ResultActions {
         val req = requireNotNull(requestDsl) { "request { } 블록이 필요합니다" }
         val res = responseDsl
+        val requestMaskPreprocessors = req.bodyDsl?.maskPreprocessors().orEmpty()
+        val responseMaskPreprocessors = res.bodyDsl?.maskPreprocessors().orEmpty()
 
         val snippets = buildSnippets(req, res)
         val requestBuilder = req.buildRequestBuilder()
@@ -92,7 +95,12 @@ class RestDocsDsl(
             .andDo(
                 MockMvcRestDocumentation.document(
                     identifier,
-                    preprocessResponse(replacePattern(jwtPattern, maskedJwt), jwtHeaderMaskingPreprocessor()),
+                    preprocessRequest(*requestMaskPreprocessors.toTypedArray()),
+                    preprocessResponse(
+                        replacePattern(jwtPattern, maskedJwt),
+                        jwtHeaderMaskingPreprocessor(),
+                        *responseMaskPreprocessors.toTypedArray(),
+                    ),
                     *snippets.toTypedArray(),
                 ),
             )

@@ -1,8 +1,11 @@
 package com.debate.pangyeori.support.dsl
 
+import org.springframework.restdocs.operation.preprocess.OperationPreprocessor
+import org.springframework.restdocs.operation.preprocess.Preprocessors.replacePattern
 import org.springframework.restdocs.payload.FieldDescriptor
 import org.springframework.restdocs.payload.JsonFieldType
 import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
+import java.util.regex.Pattern
 
 /**
  * JSON 요청 바디를 필드 단위로 작성하는 DSL.
@@ -43,6 +46,8 @@ class RequestBodyDsl {
     internal fun toJson(): String = rawJsonBody ?: bodyMap.toJsonString()
 
     internal fun descriptors(): List<FieldDescriptor> = fieldBuilders.map { it.build() }
+
+    internal fun maskPreprocessors(): List<OperationPreprocessor> = fieldBuilders.mapNotNull { it.maskPreprocessor() }
 
     private fun setNestedValue(map: MutableMap<String, Any?>, path: String, value: Any?) {
         val dotIndex = path.indexOf('.')
@@ -103,6 +108,7 @@ internal fun Any?.inferJsonFieldType(): JsonFieldType = when (this) {
  * `optional()`을 호출하면 실제 요청 바디에 해당 필드가 없어도 REST Docs 검증이 통과된다.
  * `type()`으로 필드 타입을 명시하면 생성된 스니펫 문서에 타입 정보가 포함된다.
  * 타입을 지정하지 않으면 `value`에서 자동 추론한다.
+ * `mask()`를 호출하면 실제 요청 값과 테스트 assertion에는 영향을 주지 않고 스니펫에서만 값을 `replacement`로 치환한다.
  */
 class RequestFieldBuilder internal constructor(
     private val path: String,
@@ -110,10 +116,21 @@ class RequestFieldBuilder internal constructor(
     private var optional: Boolean,
     private var type: JsonFieldType,
 ) {
+    private var maskReplacement: String? = null
+
     fun optional(): RequestFieldBuilder = apply { optional = true }
     fun type(jsonFieldType: JsonFieldType): RequestFieldBuilder = apply { type = jsonFieldType }
+    fun mask(replacement: String): RequestFieldBuilder = apply { maskReplacement = replacement }
 
     internal fun build(): FieldDescriptor =
         fieldWithPath(path).description(description).type(type)
             .let { if (optional) it.optional() else it }
+
+    internal fun maskPreprocessor(): OperationPreprocessor? = maskReplacement?.let { replacement ->
+        val key = path.substringAfterLast('.')
+        replacePattern(
+            Pattern.compile("\"$key\"\\s*:\\s*\"[^\"]*\""),
+            "\"$key\":\"$replacement\"",
+        )
+    }
 }
