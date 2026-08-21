@@ -52,7 +52,7 @@ class PasswordResetControllerTest : RestDocsMvcTest() {
                 body {
                     field("success", "처리 성공 여부")
                     obj("data", "발급된 재설정 토큰") {
-                        field("passwordResetToken", "비밀번호 재설정에 사용할 토큰")
+                        field("passwordResetToken", "비밀번호 재설정에 사용할 토큰").mask("<passwordResetToken>")
                     }
                     field("error", "오류 정보").optional()
                 }
@@ -170,7 +170,7 @@ class PasswordResetControllerTest : RestDocsMvcTest() {
             request {
                 post("/api/v1/password-resets/confirm")
                 body {
-                    field("passwordResetToken", passwordResetToken, "발급된 재설정 토큰")
+                    field("passwordResetToken", passwordResetToken, "발급된 재설정 토큰").mask("<passwordResetToken>")
                     field("newPassword", "newPassword123!", "새로 설정할 비밀번호")
                 }
             }
@@ -240,7 +240,7 @@ class PasswordResetControllerTest : RestDocsMvcTest() {
             request {
                 post("/api/v1/password-resets/confirm")
                 body {
-                    field("passwordResetToken", passwordResetToken, "이미 사용된 토큰")
+                    field("passwordResetToken", passwordResetToken, "이미 사용된 토큰").mask("<passwordResetToken>")
                     field("newPassword", "anotherPassword123!", "새로 설정할 비밀번호")
                 }
             }
