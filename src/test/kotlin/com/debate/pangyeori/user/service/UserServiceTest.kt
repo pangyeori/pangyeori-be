@@ -1,6 +1,7 @@
 package com.debate.pangyeori.user.service
 
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
+import com.debate.pangyeori.support.fixture.setAuditFields
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.exception.EmailAlreadyExistsException
 import com.debate.pangyeori.user.exception.EmailNotVerifiedException
@@ -13,13 +14,7 @@ import com.navercorp.fixturemonkey.kotlin.giveMeKotlinBuilder
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
-import io.mockk.every
-import io.mockk.clearMocks
-import io.mockk.just
-import io.mockk.mockk
-import io.mockk.runs
-import io.mockk.slot
-import io.mockk.verify
+import io.mockk.*
 import org.springframework.security.crypto.password.PasswordEncoder
 
 class UserServiceTest : BehaviorSpec({
@@ -219,6 +214,7 @@ class UserServiceTest : BehaviorSpec({
                     .set(User::email, email)
                     .set(User::nickname, nickname)
                     .sample()
+                    .let(::setAuditFields)
                 every {
                     userRepository.findByEmail(
                         email = email,
@@ -233,6 +229,7 @@ class UserServiceTest : BehaviorSpec({
                 response.email shouldBe user.email
                 response.nickname shouldBe user.nickname
                 response.profileImageUrl shouldBe user.profileImageUrl
+                response.joinedAt shouldBe user.createdAt
             }
         }
 
