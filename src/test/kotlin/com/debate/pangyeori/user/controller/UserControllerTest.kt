@@ -56,6 +56,7 @@ class UserControllerTest : RestDocsMvcTest() {
                         field("email", "사용자 이메일")
                         field("nickname", "사용자 닉네임")
                         field("profileImageUrl", "프로필 이미지 URL").optional()
+                        field("joinedAt", "가입일자")
                     }
                     field("error", "오류 정보").optional()
                 }
