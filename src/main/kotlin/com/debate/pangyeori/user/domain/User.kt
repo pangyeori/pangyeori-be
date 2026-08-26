@@ -33,7 +33,7 @@ class User private constructor(
     @Column(name = "password", nullable = false, length = 255)
     var password: String,
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 12)
     val nickname: String,
 
     @Column(name = "profile_image_url", length = 500)

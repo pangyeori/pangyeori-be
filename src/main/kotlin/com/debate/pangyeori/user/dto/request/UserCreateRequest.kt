@@ -17,7 +17,7 @@ data class UserCreateRequest(
     val password: String?,
 
     @field:NotBlank(message = "닉네임은 필수입니다.")
-    @field:Size(min = 2, max = 50, message = "닉네임은 2자 이상 50자 이하여야 합니다.")
+    @field:Size(min = 2, max = 12, message = "닉네임은 2자 이상 12자 이하여야 합니다.")
     @field:Pattern(regexp = "^[가-힣a-zA-Z0-9]+$", message = "닉네임은 특수문자를 포함할 수 없습니다.")
     val nickname: String?,
 
