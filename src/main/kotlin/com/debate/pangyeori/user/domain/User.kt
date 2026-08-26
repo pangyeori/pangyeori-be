@@ -39,11 +39,9 @@ class User private constructor(
     @Column(name = "profile_image_url", length = 500)
     val profileImageUrl: String?,
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     val role: UserRole,
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     val status: UserStatus,
 ) : BaseEntity() {
