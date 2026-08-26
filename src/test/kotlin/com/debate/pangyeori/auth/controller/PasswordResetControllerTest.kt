@@ -288,4 +288,34 @@ class PasswordResetControllerTest : RestDocsMvcTest() {
             }
         }
     }
+
+    @Test
+    fun `새 비밀번호에 특수문자가 없으면 400을 반환한다`() {
+        restDocs(mockMvc, "password-reset/confirm-password-no-special-char") {
+            summary("비밀번호 재설정")
+            tag("PasswordReset")
+            request {
+                post("/api/v1/password-resets/confirm")
+                body {
+                    field("passwordResetToken", "some-token", "재설정 토큰")
+                    field("newPassword", "newPassword123", "특수문자가 없는 비밀번호")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드명")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

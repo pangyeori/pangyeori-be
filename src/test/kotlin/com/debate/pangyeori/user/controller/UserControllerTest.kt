@@ -225,6 +225,34 @@ class UserControllerTest : RestDocsMvcTest() {
     }
 
     @Test
+    fun `닉네임에 특수문자가 포함되면 400을 반환한다`() {
+        restDocs(mockMvc, "users/check-nickname-duplicate-invalid-char") {
+            summary("닉네임 중복 확인")
+            request {
+                get("/api/v1/users/nickname/duplicate")
+                queryParameters {
+                    param("nickname", "판결이!", "특수문자가 포함된 닉네임")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "에러 정보") {
+                        field("code", "에러 코드")
+                        field("message", "에러 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun `이메일 인증을 완료하지 않으면 422를 반환한다`() {
         restDocs(mockMvc, "users/create-not-verified") {
             summary("회원가입")
@@ -299,6 +327,66 @@ class UserControllerTest : RestDocsMvcTest() {
                 post("/api/v1/users")
                 body {
                     rawJson("{}")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "에러 정보") {
+                        field("code", "에러 코드")
+                        field("message", "에러 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `회원가입 시 닉네임에 특수문자가 포함되면 400을 반환한다`() {
+        restDocs(mockMvc, "users/create-invalid-nickname") {
+            summary("회원가입")
+            request {
+                post("/api/v1/users")
+                body {
+                    field("email", "invalid-nickname@pangyeori.com", "인증을 완료한 이메일")
+                    field("password", "password123!", "비밀번호")
+                    field("nickname", "판결이!", "특수문자가 포함된 닉네임")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "에러 정보") {
+                        field("code", "에러 코드")
+                        field("message", "에러 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `비밀번호에 특수문자가 없으면 400을 반환한다`() {
+        restDocs(mockMvc, "users/create-invalid-password") {
+            summary("회원가입")
+            request {
+                post("/api/v1/users")
+                body {
+                    field("email", "invalid-password@pangyeori.com", "인증을 완료한 이메일")
+                    field("password", "password123", "특수문자가 없는 비밀번호")
+                    field("nickname", "판결이", "닉네임")
                 }
             }
             response {
