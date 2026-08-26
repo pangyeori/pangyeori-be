@@ -197,13 +197,13 @@ class UserControllerTest : RestDocsMvcTest() {
     }
 
     @Test
-    fun `닉네임이 50자를 초과하면 400을 반환한다`() {
+    fun `닉네임이 12자를 초과하면 400을 반환한다`() {
         restDocs(mockMvc, "users/check-nickname-duplicate-too-long") {
             summary("닉네임 중복 확인")
             request {
                 get("/api/v1/users/nickname/duplicate")
                 queryParameters {
-                    param("nickname", "a".repeat(51), "50자를 초과하는 닉네임")
+                    param("nickname", "a".repeat(13), "12자를 초과하는 닉네임")
                 }
             }
             response {
