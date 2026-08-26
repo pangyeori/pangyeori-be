@@ -1,6 +1,10 @@
 package com.debate.pangyeori.user.domain.enums
 
-enum class UserRole {
-    USER,
-    ADMIN,
+import com.debate.pangyeori.common.converter.CodeEnum
+
+enum class UserRole(
+    override val code: String,
+) : CodeEnum {
+    USER("USER"),
+    ADMIN("ADMIN"),
 }

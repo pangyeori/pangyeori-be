@@ -1,7 +1,11 @@
 package com.debate.pangyeori.user.domain.enums
 
-enum class UserStatus {
-    ACTIVE,
-    SUSPENDED,
-    WITHDRAWN,
+import com.debate.pangyeori.common.converter.CodeEnum
+
+enum class UserStatus(
+    override val code: String,
+) : CodeEnum {
+    ACTIVE("ACTIVE"),
+    SUSPENDED("SUSPENDED"),
+    WITHDRAWN("WITHDRAWN"),
 }
