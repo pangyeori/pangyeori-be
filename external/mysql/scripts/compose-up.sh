@@ -23,7 +23,7 @@ docker compose \
 
 # MySQL 준비 확인
 echo "Waiting for MySQL to become ready..."
-until docker exec mysql mysqladmin ping -uroot -p${MYSQL_ROOT_PASSWORD} >/dev/null 2>&1; do
+until docker exec ${MYSQL_CONTAINER_NAME} mysqladmin ping -uroot -p${MYSQL_ROOT_PASSWORD} >/dev/null 2>&1; do
   sleep 1
 done
 
