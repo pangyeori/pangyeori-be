@@ -80,6 +80,14 @@ springdoc:
     console:
       enabled: false
 
+aws:
+  region: ${AWS_REGION:ap-northeast-2}
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    presign:
+      upload-expiry: ${AWS_S3_PRESIGN_UPLOAD_EXPIRY:5m}
+      download-expiry: ${AWS_S3_PRESIGN_DOWNLOAD_EXPIRY:10m}
+
 security:
   jwt:
     issuer: pangyeori

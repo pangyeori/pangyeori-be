@@ -27,6 +27,14 @@ spring:
           starttls:
             enable: true
 
+aws:
+  region: ap-northeast-2
+  s3:
+    bucket: test-bucket
+    presign:
+      upload-expiry: 5m
+      download-expiry: 10m
+
 security:
   jwt:
     issuer: pangyeori

@@ -54,6 +54,10 @@ dependencies {
     // Redis
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
+    // AWS S3
+    implementation(platform("software.amazon.awssdk:bom:2.54.9"))
+    implementation("software.amazon.awssdk:s3")
+
     // Database
     runtimeOnly("com.mysql:mysql-connector-j")
 

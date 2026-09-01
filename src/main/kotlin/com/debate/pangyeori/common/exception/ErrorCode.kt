@@ -33,6 +33,9 @@ enum class ErrorCode(
     // 비밀번호 재설정
     PASSWORD_RESET_TOKEN_NOT_FOUND(HttpStatus.UNPROCESSABLE_ENTITY, "재설정 토큰이 존재하지 않거나 만료되었습니다."),
 
+    // 스토리지
+    UNSUPPORTED_CONTENT_TYPE(HttpStatus.UNPROCESSABLE_ENTITY, "지원하지 않는 파일 형식입니다."),
+
     // 공통
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."),
