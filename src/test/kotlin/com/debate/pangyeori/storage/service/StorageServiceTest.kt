@@ -27,7 +27,7 @@ class StorageServiceTest : BehaviorSpec({
     )
 
     Given("업로드 URL 발급 요청이 오면") {
-        val validContentLength = 1_024L
+        val validContentLength = StorageCategory.PROFILE_IMAGE.maxUploadBytes
 
         When("카테고리가 허용하는 콘텐츠 타입이고 크기가 상한 이내이면") {
             Then("카테고리 prefix와 날짜 파티션, 확장자를 붙인 오브젝트 키와 업로드 URL을 반환한다") {

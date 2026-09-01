@@ -2,6 +2,7 @@ package com.debate.pangyeori.storage.controller
 
 import com.debate.pangyeori.auth.service.AuthService
 import com.debate.pangyeori.storage.client.TestObjectStorageConfig
+import com.debate.pangyeori.storage.policy.StorageCategory
 import com.debate.pangyeori.support.RestDocsMvcTest
 import com.debate.pangyeori.support.dsl.restDocs
 import com.debate.pangyeori.user.domain.User
@@ -22,6 +23,8 @@ class StorageControllerTest : RestDocsMvcTest() {
 
     @Autowired
     private lateinit var authService: AuthService
+
+    private val maxUploadBytes = StorageCategory.PROFILE_IMAGE.maxUploadBytes
 
     private fun issueAccessToken(
         email: String = "storage-user@pangyeori.com",
@@ -54,7 +57,7 @@ class StorageControllerTest : RestDocsMvcTest() {
                 body {
                     field("category", "PROFILE_IMAGE", "업로드 용도 (PROFILE_IMAGE)")
                     field("contentType", "image/png", "업로드할 파일의 콘텐츠 타입 (image/png, image/jpeg, image/webp)")
-                    field("contentLength", 20480, "업로드할 파일 크기 (바이트, 카테고리별 상한 이내)")
+                    field("contentLength", maxUploadBytes, "업로드할 파일 크기 (바이트, 카테고리별 상한 이내)")
                 }
             }
             response {
@@ -82,7 +85,7 @@ class StorageControllerTest : RestDocsMvcTest() {
                 body {
                     field("category", "PROFILE_IMAGE", "업로드 용도")
                     field("contentType", "image/png", "업로드할 파일의 콘텐츠 타입")
-                    field("contentLength", 20480, "업로드할 파일 크기 (바이트)")
+                    field("contentLength", maxUploadBytes, "업로드할 파일 크기 (바이트)")
                 }
             }
             response {
@@ -113,7 +116,7 @@ class StorageControllerTest : RestDocsMvcTest() {
                 body {
                     field("category", "PROFILE_IMAGE", "업로드 용도")
                     field("contentType", "image/gif", "카테고리가 허용하지 않는 콘텐츠 타입")
-                    field("contentLength", 20480, "업로드할 파일 크기 (바이트)")
+                    field("contentLength", maxUploadBytes, "업로드할 파일 크기 (바이트)")
                 }
             }
             response {
@@ -174,7 +177,7 @@ class StorageControllerTest : RestDocsMvcTest() {
                 post("/api/v1/storage/upload-urls")
                 header("Authorization", "Bearer $accessToken")
                 body {
-                    rawJson("""{"category":"UNKNOWN","contentType":"image/png","contentLength":20480}""")
+                    rawJson("""{"category":"UNKNOWN","contentType":"image/png","contentLength":$maxUploadBytes}""")
                 }
             }
             response {
@@ -205,7 +208,7 @@ class StorageControllerTest : RestDocsMvcTest() {
                 body {
                     field("category", "PROFILE_IMAGE", "업로드 용도")
                     field("contentType", "image/png", "업로드할 파일의 콘텐츠 타입")
-                    field("contentLength", 6 * 1024 * 1024, "카테고리 상한(5MiB)을 초과하는 파일 크기")
+                    field("contentLength", maxUploadBytes + 1, "카테고리 상한을 초과하는 파일 크기")
                 }
             }
             response {
