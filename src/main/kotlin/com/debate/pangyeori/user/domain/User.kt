@@ -36,8 +36,8 @@ class User private constructor(
     @Column(nullable = false, length = 12)
     val nickname: String,
 
-    @Column(name = "profile_image_url", length = 500)
-    val profileImageUrl: String?,
+    @Column(name = "profile_image_key", length = 500)
+    val profileImageKey: String?,
 
     @Column(nullable = false, length = 20)
     val role: UserRole,
@@ -56,12 +56,11 @@ class User private constructor(
             email: String,
             password: String,
             nickname: String,
-            profileImageUrl: String?,
         ) = User(
             email = email,
             password = password,
             nickname = nickname,
-            profileImageUrl = profileImageUrl,
+            profileImageKey = null,
             role = UserRole.USER,
             status = UserStatus.ACTIVE,
         )

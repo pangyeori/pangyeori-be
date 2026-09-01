@@ -24,7 +24,6 @@ class UserService(
         email: String,
         password: String,
         nickname: String,
-        profileImageUrl: String?,
     ) {
         val normalizedEmail = email.trim().lowercase()
         val normalizedNickname = nickname.trim()
@@ -52,7 +51,6 @@ class UserService(
             email = normalizedEmail,
             password = passwordEncoder.encode(password)!!,
             nickname = normalizedNickname,
-            profileImageUrl = profileImageUrl?.trim()?.takeIf { it.isNotEmpty() },
         )
         userRepository.save(user)
         emailVerificationRedisRepository.clearVerified(

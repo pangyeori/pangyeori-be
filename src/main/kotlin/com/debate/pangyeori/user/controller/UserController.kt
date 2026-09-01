@@ -44,7 +44,6 @@ class UserController(
             email = request.email!!,
             password = request.password!!,
             nickname = request.nickname!!,
-            profileImageUrl = request.profileImageUrl,
         )
 
         return ResponseEntity.status(HttpStatus.CREATED).build()
