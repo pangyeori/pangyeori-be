@@ -32,7 +32,6 @@ class UserControllerTest : RestDocsMvcTest() {
                 email = email,
                 password = passwordEncoder.encode(password)!!,
                 nickname = "마이페이지사용자",
-                profileImageUrl = "https://example.com/profile.png",
             ),
         )
         val accessToken = authService.signIn(
@@ -55,7 +54,7 @@ class UserControllerTest : RestDocsMvcTest() {
                         field("id", "사용자 ID")
                         field("email", "사용자 이메일")
                         field("nickname", "사용자 닉네임")
-                        field("profileImageUrl", "프로필 이미지 URL").optional()
+                        field("profileImageKey", "프로필 이미지 키").optional()
                         field("joinedAt", "가입일자")
                     }
                     field("error", "오류 정보").optional()
@@ -102,7 +101,6 @@ class UserControllerTest : RestDocsMvcTest() {
                     field("email", email, "인증을 완료한 이메일")
                     field("password", "password123!", "8자 이상 64자 이하 비밀번호")
                     field("nickname", "판결이", "사용할 닉네임")
-                    field("profileImageUrl", "https://example.com/profile.png", "프로필 이미지 URL").optional()
                 }
             }
             response {
@@ -118,7 +116,6 @@ class UserControllerTest : RestDocsMvcTest() {
                 email = "nickname-check@pangyeori.com",
                 password = "encoded-password",
                 nickname = "판결이",
-                profileImageUrl = null,
             ),
         )
 
@@ -287,7 +284,6 @@ class UserControllerTest : RestDocsMvcTest() {
                 email = email,
                 password = "encoded-password",
                 nickname = "기존사용자",
-                profileImageUrl = null,
             ),
         )
         emailVerificationRedisRepository.markVerified(

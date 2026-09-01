@@ -85,7 +85,6 @@ class UserServiceTest : BehaviorSpec({
                     email = email,
                     password = password,
                     nickname = nickname,
-                    profileImageUrl = null,
                 )
 
                 userSlot.captured.password shouldBe "encoded-password"
@@ -112,7 +111,6 @@ class UserServiceTest : BehaviorSpec({
                         email = email,
                         password = password,
                         nickname = nickname,
-                        profileImageUrl = null,
                     )
                 }
             }
@@ -141,7 +139,6 @@ class UserServiceTest : BehaviorSpec({
                         email = email,
                         password = password,
                         nickname = nickname,
-                        profileImageUrl = null,
                     )
                 }
             }
@@ -165,7 +162,6 @@ class UserServiceTest : BehaviorSpec({
                         email = email,
                         password = password,
                         nickname = nickname,
-                        profileImageUrl = null,
                     )
                 }
             }
@@ -228,7 +224,7 @@ class UserServiceTest : BehaviorSpec({
                 response.id shouldBe user.id
                 response.email shouldBe user.email
                 response.nickname shouldBe user.nickname
-                response.profileImageUrl shouldBe user.profileImageUrl
+                response.profileImageKey shouldBe user.profileImageKey
                 response.joinedAt shouldBe user.createdAt
             }
         }
