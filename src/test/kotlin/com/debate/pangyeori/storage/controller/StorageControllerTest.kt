@@ -54,6 +54,7 @@ class StorageControllerTest : RestDocsMvcTest() {
                 body {
                     field("category", "PROFILE_IMAGE", "업로드 용도 (PROFILE_IMAGE)")
                     field("contentType", "image/png", "업로드할 파일의 콘텐츠 타입 (image/png, image/jpeg, image/webp)")
+                    field("contentLength", 20480, "업로드할 파일 크기 (바이트, 카테고리별 상한 이내)")
                 }
             }
             response {
@@ -81,6 +82,7 @@ class StorageControllerTest : RestDocsMvcTest() {
                 body {
                     field("category", "PROFILE_IMAGE", "업로드 용도")
                     field("contentType", "image/png", "업로드할 파일의 콘텐츠 타입")
+                    field("contentLength", 20480, "업로드할 파일 크기 (바이트)")
                 }
             }
             response {
@@ -111,6 +113,7 @@ class StorageControllerTest : RestDocsMvcTest() {
                 body {
                     field("category", "PROFILE_IMAGE", "업로드 용도")
                     field("contentType", "image/gif", "카테고리가 허용하지 않는 콘텐츠 타입")
+                    field("contentLength", 20480, "업로드할 파일 크기 (바이트)")
                 }
             }
             response {
@@ -171,7 +174,7 @@ class StorageControllerTest : RestDocsMvcTest() {
                 post("/api/v1/storage/upload-urls")
                 header("Authorization", "Bearer $accessToken")
                 body {
-                    rawJson("""{"category":"UNKNOWN","contentType":"image/png"}""")
+                    rawJson("""{"category":"UNKNOWN","contentType":"image/png","contentLength":20480}""")
                 }
             }
             response {
@@ -183,6 +186,71 @@ class StorageControllerTest : RestDocsMvcTest() {
                         field("code", "오류 코드")
                         field("message", "오류 메시지")
                         field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `파일 크기가 카테고리 상한을 초과하면 422를 반환한다`() {
+        val accessToken = issueAccessToken()
+
+        restDocs(mockMvc, "storage/create-upload-url-file-too-large") {
+            summary("업로드 URL 발급")
+            tag("Storage")
+            request {
+                post("/api/v1/storage/upload-urls")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("category", "PROFILE_IMAGE", "업로드 용도")
+                    field("contentType", "image/png", "업로드할 파일의 콘텐츠 타입")
+                    field("contentLength", 6 * 1024 * 1024, "카테고리 상한(5MiB)을 초과하는 파일 크기")
+                }
+            }
+            response {
+                status(422)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `파일 크기가 0 이하면 400을 반환한다`() {
+        val accessToken = issueAccessToken()
+
+        restDocs(mockMvc, "storage/create-upload-url-non-positive-length") {
+            summary("업로드 URL 발급")
+            tag("Storage")
+            request {
+                post("/api/v1/storage/upload-urls")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("category", "PROFILE_IMAGE", "업로드 용도")
+                    field("contentType", "image/png", "업로드할 파일의 콘텐츠 타입")
+                    field("contentLength", 0, "0 이하의 잘못된 파일 크기")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
                     }
                 }
             }

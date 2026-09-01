@@ -7,6 +7,7 @@ class FakeObjectStorage : ObjectStorage {
     override fun createUploadUrl(
         objectKey: String,
         contentType: String,
+        contentLength: Long,
         expiry: Duration,
     ): String = "$FAKE_BASE_URL/$objectKey"
 

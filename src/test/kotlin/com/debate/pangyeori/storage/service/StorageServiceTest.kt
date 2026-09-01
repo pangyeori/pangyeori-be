@@ -1,6 +1,7 @@
 package com.debate.pangyeori.storage.service
 
 import com.debate.pangyeori.storage.client.ObjectStorage
+import com.debate.pangyeori.storage.exception.FileTooLargeException
 import com.debate.pangyeori.storage.exception.PresignFailedException
 import com.debate.pangyeori.storage.exception.UnsupportedContentTypeException
 import com.debate.pangyeori.storage.policy.StorageCategory
@@ -26,12 +27,15 @@ class StorageServiceTest : BehaviorSpec({
     )
 
     Given("업로드 URL 발급 요청이 오면") {
-        When("카테고리가 허용하는 콘텐츠 타입이면") {
+        val validContentLength = 1_024L
+
+        When("카테고리가 허용하는 콘텐츠 타입이고 크기가 상한 이내이면") {
             Then("카테고리 prefix와 날짜 파티션, 확장자를 붙인 오브젝트 키와 업로드 URL을 반환한다") {
                 every {
                     objectStorage.createUploadUrl(
                         objectKey = any(),
                         contentType = "image/png",
+                        contentLength = validContentLength,
                         expiry = uploadExpiry,
                     )
                 } returns "https://s3.example/upload"
@@ -39,6 +43,7 @@ class StorageServiceTest : BehaviorSpec({
                 val response = storageService.createUploadUrl(
                     category = StorageCategory.PROFILE_IMAGE,
                     contentType = "image/png",
+                    contentLength = validContentLength,
                 )
 
                 response.objectKey shouldMatch Regex("""^profile-images/\d{4}/\d{2}/[0-9A-Za-z]+\.png$""")
@@ -53,6 +58,19 @@ class StorageServiceTest : BehaviorSpec({
                     storageService.createUploadUrl(
                         category = StorageCategory.PROFILE_IMAGE,
                         contentType = "image/gif",
+                        contentLength = validContentLength,
+                    )
+                }
+            }
+        }
+
+        When("파일 크기가 카테고리 상한을 초과하면") {
+            Then("FileTooLargeException을 던진다") {
+                shouldThrow<FileTooLargeException> {
+                    storageService.createUploadUrl(
+                        category = StorageCategory.PROFILE_IMAGE,
+                        contentType = "image/png",
+                        contentLength = StorageCategory.PROFILE_IMAGE.maxUploadBytes + 1,
                     )
                 }
             }
@@ -64,6 +82,7 @@ class StorageServiceTest : BehaviorSpec({
                     objectStorage.createUploadUrl(
                         objectKey = any(),
                         contentType = any(),
+                        contentLength = any(),
                         expiry = any(),
                     )
                 } throws SdkClientException.create("presign failed")
@@ -72,6 +91,7 @@ class StorageServiceTest : BehaviorSpec({
                     storageService.createUploadUrl(
                         category = StorageCategory.PROFILE_IMAGE,
                         contentType = "image/png",
+                        contentLength = validContentLength,
                     )
                 }
             }
