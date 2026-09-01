@@ -20,12 +20,14 @@ class S3ObjectStorage(
     override fun createUploadUrl(
         objectKey: String,
         contentType: String,
+        contentLength: Long,
         expiry: Duration,
     ): String {
         val putObjectRequest = PutObjectRequest.builder()
             .bucket(bucket)
             .key(objectKey)
             .contentType(contentType)
+            .contentLength(contentLength)
             .build()
         val presignRequest = PutObjectPresignRequest.builder()
             .signatureDuration(expiry)

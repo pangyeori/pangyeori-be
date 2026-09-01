@@ -3,6 +3,7 @@ package com.debate.pangyeori.storage.service
 import com.debate.pangyeori.storage.client.ObjectStorage
 import com.debate.pangyeori.storage.dto.response.UploadUrlResponse
 import com.debate.pangyeori.storage.dto.response.ViewUrlResponse
+import com.debate.pangyeori.storage.exception.FileTooLargeException
 import com.debate.pangyeori.storage.exception.PresignFailedException
 import com.debate.pangyeori.storage.exception.UnsupportedContentTypeException
 import com.debate.pangyeori.storage.policy.StorageCategory
@@ -28,10 +29,14 @@ class StorageService(
     fun createUploadUrl(
         category: StorageCategory,
         contentType: String,
+        contentLength: Long,
     ): UploadUrlResponse {
         val extension = category.extensionFor(
             contentType = contentType,
         ) ?: throw UnsupportedContentTypeException()
+        if (contentLength > category.maxUploadBytes) {
+            throw FileTooLargeException()
+        }
         val datePath = LocalDate.now(ZoneOffset.UTC).format(DATE_PATH_FORMAT)
         val objectId = TSID.fast().toString()
         val objectKey = "${category.prefix}/$datePath/$objectId.$extension"
@@ -40,6 +45,7 @@ class StorageService(
             objectStorage.createUploadUrl(
                 objectKey = objectKey,
                 contentType = contentType,
+                contentLength = contentLength,
                 expiry = uploadExpiry,
             )
         } catch (e: SdkException) {

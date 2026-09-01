@@ -6,6 +6,7 @@ interface ObjectStorage {
     fun createUploadUrl(
         objectKey: String,
         contentType: String,
+        contentLength: Long,
         expiry: Duration,
     ): String
 

@@ -27,6 +27,7 @@ class StorageController(
         val response = storageService.createUploadUrl(
             category = request.category!!,
             contentType = request.contentType!!,
+            contentLength = request.contentLength!!,
         )
 
         return ResponseEntity.ok(

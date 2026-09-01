@@ -14,9 +14,10 @@ class LoggingObjectStorage : ObjectStorage {
     override fun createUploadUrl(
         objectKey: String,
         contentType: String,
+        contentLength: Long,
         expiry: Duration,
     ): String {
-        logger.info { "[local] 업로드 URL 발급 생략. objectKey=$objectKey, contentType=$contentType" }
+        logger.info { "[local] 업로드 URL 발급 생략. objectKey=$objectKey, contentType=$contentType, contentLength=$contentLength" }
         return "$LOCAL_BASE_URL/$objectKey"
     }
 

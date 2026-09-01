@@ -35,6 +35,7 @@ enum class ErrorCode(
 
     // 스토리지
     UNSUPPORTED_CONTENT_TYPE(HttpStatus.UNPROCESSABLE_ENTITY, "지원하지 않는 파일 형식입니다."),
+    FILE_TOO_LARGE(HttpStatus.UNPROCESSABLE_ENTITY, "파일 크기가 허용 한도를 초과했습니다."),
 
     // 공통
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
