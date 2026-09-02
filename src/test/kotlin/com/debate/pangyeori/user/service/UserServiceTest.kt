@@ -3,6 +3,7 @@ package com.debate.pangyeori.user.service
 import com.debate.pangyeori.auth.domain.RefreshToken
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.auth.repository.RefreshTokenRepository
+import com.debate.pangyeori.storage.client.ObjectStorage
 import com.debate.pangyeori.support.fixture.setAuditFields
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.domain.enums.UserStatus
@@ -21,17 +22,20 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.*
 import org.springframework.security.crypto.password.PasswordEncoder
+import software.amazon.awssdk.core.exception.SdkClientException
 
 class UserServiceTest : BehaviorSpec({
     val userRepository = mockk<UserRepository>()
     val emailVerificationRedisRepository = mockk<EmailVerificationRedisRepository>()
     val refreshTokenRepository = mockk<RefreshTokenRepository>()
+    val objectStorage = mockk<ObjectStorage>(relaxUnitFun = true)
     val passwordEncoder = mockk<PasswordEncoder>()
 
     val userService = UserService(
         userRepository = userRepository,
         emailVerificationRedisRepository = emailVerificationRedisRepository,
         refreshTokenRepository = refreshTokenRepository,
+        objectStorage = objectStorage,
         passwordEncoder = passwordEncoder,
     )
 
@@ -48,6 +52,7 @@ class UserServiceTest : BehaviorSpec({
             userRepository,
             emailVerificationRedisRepository,
             refreshTokenRepository,
+            objectStorage,
             passwordEncoder,
         )
     }
@@ -55,11 +60,13 @@ class UserServiceTest : BehaviorSpec({
     fun activeUser(
         currentNickname: String = nickname,
         currentPassword: String = "encoded-password",
+        currentProfileImageKey: String? = null,
     ): User = fixtureMonkey.giveMeKotlinBuilder<User>()
         .set(User::id, "0000000000001")
         .set(User::email, email)
         .set(User::nickname, currentNickname)
         .set(User::password, currentPassword)
+        .set(User::profileImageKey, currentProfileImageKey)
         .set(User::status, UserStatus.ACTIVE)
         .sample()
         .let(::setAuditFields)
@@ -335,9 +342,9 @@ class UserServiceTest : BehaviorSpec({
             }
         }
 
-        When("프로필 이미지 키가 주어지면") {
-            Then("프로필 이미지 키를 변경한다") {
-                val user = activeUser()
+        When("기존 프로필 이미지가 없는 상태에서 새 키가 주어지면") {
+            Then("프로필 이미지 키를 변경하고 S3 삭제는 호출하지 않는다") {
+                val user = activeUser(currentProfileImageKey = null)
                 every {
                     userRepository.findByEmail(
                         email = email,
@@ -351,21 +358,90 @@ class UserServiceTest : BehaviorSpec({
                 )
 
                 user.profileImageKey shouldBe "profile-images/2026/09/0000000000001.png"
+                verify(exactly = 0) {
+                    objectStorage.deleteObject(objectKey = any())
+                }
             }
         }
-    }
 
-    Given("로그인한 사용자가 프로필 이미지를 제거할 때") {
-        When("제거를 요청하면") {
-            Then("profileImageKey를 null로 만든다") {
-                val user = activeUser().apply {
-                    changeProfileImage(newKey = "profile-images/2026/09/0000000000001.png")
-                }
+        When("기존 프로필 이미지와 다른 새 키가 주어지면") {
+            Then("프로필 이미지 키를 변경하고 이전 객체를 S3에서 삭제한다") {
+                val previousKey = "profile-images/2026/08/0000000000001.png"
+                val user = activeUser(currentProfileImageKey = previousKey)
                 every {
                     userRepository.findByEmail(
                         email = email,
                     )
                 } returns user
+
+                userService.updateProfile(
+                    email = email,
+                    nickname = null,
+                    profileImageKey = "profile-images/2026/09/0000000000001.png",
+                )
+
+                user.profileImageKey shouldBe "profile-images/2026/09/0000000000001.png"
+                verify {
+                    objectStorage.deleteObject(objectKey = previousKey)
+                }
+            }
+        }
+    }
+
+    Given("로그인한 사용자가 프로필 이미지를 제거할 때") {
+        When("프로필 이미지가 있으면") {
+            Then("profileImageKey를 null로 만들고 이전 객체를 S3에서 삭제한다") {
+                val previousKey = "profile-images/2026/09/0000000000001.png"
+                val user = activeUser(currentProfileImageKey = previousKey)
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user
+
+                userService.removeProfileImage(
+                    email = email,
+                )
+
+                user.profileImageKey shouldBe null
+                verify {
+                    objectStorage.deleteObject(objectKey = previousKey)
+                }
+            }
+        }
+
+        When("프로필 이미지가 없으면") {
+            Then("S3 삭제를 호출하지 않는다") {
+                val user = activeUser(currentProfileImageKey = null)
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user
+
+                userService.removeProfileImage(
+                    email = email,
+                )
+
+                user.profileImageKey shouldBe null
+                verify(exactly = 0) {
+                    objectStorage.deleteObject(objectKey = any())
+                }
+            }
+        }
+
+        When("S3 객체 삭제가 실패해도") {
+            Then("예외를 전파하지 않고 profileImageKey를 null로 유지한다") {
+                val previousKey = "profile-images/2026/09/0000000000001.png"
+                val user = activeUser(currentProfileImageKey = previousKey)
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user
+                every {
+                    objectStorage.deleteObject(objectKey = previousKey)
+                } throws SdkClientException.builder().message("S3 연결 실패").build()
 
                 userService.removeProfileImage(
                     email = email,
@@ -463,6 +539,37 @@ class UserServiceTest : BehaviorSpec({
                 verify {
                     refreshToken.revoke()
                     userRepository.delete(user)
+                }
+                verify(exactly = 0) {
+                    objectStorage.deleteObject(objectKey = any())
+                }
+            }
+        }
+
+        When("프로필 이미지가 있는 회원이 탈퇴하면") {
+            Then("프로필 이미지 S3 객체도 삭제한다") {
+                val previousKey = "profile-images/2026/09/0000000000001.png"
+                val user = activeUser(currentProfileImageKey = previousKey)
+                val refreshToken = mockk<RefreshToken>(relaxed = true)
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user
+                every {
+                    refreshTokenRepository.findAllByUserAndRevokedAtIsNull(
+                        user = user,
+                    )
+                } returns listOf(refreshToken)
+                every { userRepository.flush() } just runs
+                every { userRepository.delete(user) } just runs
+
+                userService.withdraw(
+                    email = email,
+                )
+
+                verify {
+                    objectStorage.deleteObject(objectKey = previousKey)
                 }
             }
         }
