@@ -18,6 +18,7 @@ import com.navercorp.fixturemonkey.kotlin.giveMeKotlinBuilder
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.*
 import org.springframework.security.crypto.password.PasswordEncoder
 
@@ -434,8 +435,10 @@ class UserServiceTest : BehaviorSpec({
 
     Given("로그인한 사용자가 회원 탈퇴를 요청할 때") {
         When("탈퇴를 진행하면") {
-            Then("상태를 WITHDRAWN으로 바꾸고 모든 refresh token을 revoke한다") {
+            Then("status를 WITHDRAWN으로 바꾸고 식별 정보를 익명화하며 soft delete하고 refresh token을 revoke한다") {
                 val user = activeUser()
+                val originalEmail = user.email
+                val originalNickname = user.nickname
                 val refreshToken = mockk<RefreshToken>(relaxed = true)
                 every {
                     userRepository.findByEmail(
@@ -447,14 +450,19 @@ class UserServiceTest : BehaviorSpec({
                         user = user,
                     )
                 } returns listOf(refreshToken)
+                every { userRepository.flush() } just runs
+                every { userRepository.delete(user) } just runs
 
                 userService.withdraw(
                     email = email,
                 )
 
                 user.status shouldBe UserStatus.WITHDRAWN
+                user.email shouldNotBe originalEmail
+                user.nickname shouldNotBe originalNickname
                 verify {
                     refreshToken.revoke()
+                    userRepository.delete(user)
                 }
             }
         }
