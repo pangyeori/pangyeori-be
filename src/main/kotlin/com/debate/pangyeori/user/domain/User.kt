@@ -34,10 +34,10 @@ class User private constructor(
     var password: String,
 
     @Column(nullable = false, length = 12)
-    val nickname: String,
+    var nickname: String,
 
     @Column(name = "profile_image_key", length = 500)
-    val profileImageKey: String?,
+    var profileImageKey: String?,
 
     @Column(nullable = false, length = 20)
     val role: UserRole,
@@ -49,6 +49,18 @@ class User private constructor(
         newPassword: String,
     ) {
         password = newPassword
+    }
+
+    fun changeNickname(
+        newNickname: String,
+    ) {
+        nickname = newNickname
+    }
+
+    fun changeProfileImage(
+        newKey: String,
+    ) {
+        profileImageKey = newKey
     }
 
     companion object {
