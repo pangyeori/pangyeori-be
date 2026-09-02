@@ -478,6 +478,48 @@ class UserControllerTest : RestDocsMvcTest() {
     }
 
     @Test
+    fun `프로필 이미지를 제거한다`() {
+        val accessToken = issueAccessToken(
+            email = "remove-image@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/remove-profile-image") {
+            summary("프로필 이미지 제거")
+            tag("Users")
+            request {
+                delete("/api/v1/users/me/profile-image")
+                header("Authorization", "Bearer $accessToken")
+            }
+            response {
+                status(204)
+            }
+        }
+    }
+
+    @Test
+    fun `인증 없이 프로필 이미지를 제거하면 401을 반환한다`() {
+        restDocs(mockMvc, "users/remove-profile-image-unauthorized") {
+            summary("프로필 이미지 제거")
+            tag("Users")
+            request {
+                delete("/api/v1/users/me/profile-image")
+            }
+            response {
+                status(401)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun `이미 사용 중인 닉네임으로 수정하면 409를 반환한다`() {
         userRepository.save(
             User.create(

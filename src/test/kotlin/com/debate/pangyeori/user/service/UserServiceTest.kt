@@ -354,6 +354,27 @@ class UserServiceTest : BehaviorSpec({
         }
     }
 
+    Given("로그인한 사용자가 프로필 이미지를 제거할 때") {
+        When("제거를 요청하면") {
+            Then("profileImageKey를 null로 만든다") {
+                val user = activeUser().apply {
+                    changeProfileImage(newKey = "profile-images/2026/09/0000000000001.png")
+                }
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user
+
+                userService.removeProfileImage(
+                    email = email,
+                )
+
+                user.profileImageKey shouldBe null
+            }
+        }
+    }
+
     Given("로그인한 사용자가 비밀번호를 변경할 때") {
         When("현재 비밀번호가 일치하지 않으면") {
             Then("InvalidCurrentPasswordException을 던진다") {
