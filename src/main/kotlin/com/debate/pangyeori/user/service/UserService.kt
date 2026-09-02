@@ -2,6 +2,7 @@ package com.debate.pangyeori.user.service
 
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.auth.repository.RefreshTokenRepository
+import com.debate.pangyeori.storage.client.ObjectStorage
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.dto.response.NicknameDuplicateResponse
 import com.debate.pangyeori.user.dto.response.UserResponse
@@ -11,17 +12,23 @@ import com.debate.pangyeori.user.exception.InvalidCurrentPasswordException
 import com.debate.pangyeori.user.exception.NicknameAlreadyExistsException
 import com.debate.pangyeori.user.exception.UserNotFoundException
 import com.debate.pangyeori.user.repository.UserRepository
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import software.amazon.awssdk.core.exception.SdkException
 
 @Service
 class UserService(
     private val userRepository: UserRepository,
     private val emailVerificationRedisRepository: EmailVerificationRedisRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
+    private val objectStorage: ObjectStorage,
     private val passwordEncoder: PasswordEncoder,
 ) {
+
+    private val logger = KotlinLogging.logger {}
+
     @Transactional
     fun createUser(
         email: String,
@@ -107,9 +114,15 @@ class UserService(
             )
         }
         if (profileImageKey != null) {
+            val previousKey = user.profileImageKey
             user.changeProfileImage(
                 newKey = profileImageKey,
             )
+            if (previousKey != null && previousKey != profileImageKey) {
+                deleteObjectQuietly(
+                    objectKey = previousKey,
+                )
+            }
         }
 
         return UserResponse.from(
@@ -125,7 +138,13 @@ class UserService(
             email = email,
         )
 
+        val previousKey = user.profileImageKey
         user.removeProfileImage()
+        if (previousKey != null) {
+            deleteObjectQuietly(
+                objectKey = previousKey,
+            )
+        }
     }
 
     @Transactional
@@ -157,6 +176,7 @@ class UserService(
         val user = findUser(
             email = email,
         )
+        val previousKey = user.profileImageKey
 
         revokeRefreshTokens(
             user = user,
@@ -164,6 +184,12 @@ class UserService(
         user.withdraw()
         userRepository.flush()
         userRepository.delete(user)
+
+        if (previousKey != null) {
+            deleteObjectQuietly(
+                objectKey = previousKey,
+            )
+        }
     }
 
     private fun findUser(
@@ -178,5 +204,17 @@ class UserService(
         refreshTokenRepository.findAllByUserAndRevokedAtIsNull(
             user = user,
         ).forEach { it.revoke() }
+    }
+
+    private fun deleteObjectQuietly(
+        objectKey: String,
+    ) {
+        try {
+            objectStorage.deleteObject(
+                objectKey = objectKey,
+            )
+        } catch (e: SdkException) {
+            logger.warn(e) { "프로필 이미지 삭제에 실패했습니다. objectKey=$objectKey" }
+        }
     }
 }
