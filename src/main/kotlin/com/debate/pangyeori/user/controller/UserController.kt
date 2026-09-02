@@ -1,5 +1,6 @@
 package com.debate.pangyeori.user.controller
 
+import com.debate.pangyeori.auth.token.RefreshTokenCookieProvider
 import com.debate.pangyeori.common.dto.ApiResponse
 import com.debate.pangyeori.user.dto.request.NicknameDuplicateRequest
 import com.debate.pangyeori.user.dto.request.PasswordChangeRequest
@@ -9,8 +10,10 @@ import com.debate.pangyeori.user.dto.response.NicknameDuplicateResponse
 import com.debate.pangyeori.user.dto.response.UserResponse
 import com.debate.pangyeori.user.service.UserService
 import jakarta.validation.Valid
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -23,6 +26,7 @@ import java.security.Principal
 @RequestMapping("/api/v1/users")
 class UserController(
     private val userService: UserService,
+    private val refreshTokenCookieProvider: RefreshTokenCookieProvider,
 ) {
     @GetMapping("/me")
     fun getMyInfo(
@@ -82,6 +86,19 @@ class UserController(
         )
 
         return ResponseEntity.noContent().build()
+    }
+
+    @DeleteMapping("/me")
+    fun withdraw(
+        principal: Principal,
+    ): ResponseEntity<Void> {
+        userService.withdraw(
+            email = principal.name,
+        )
+
+        return ResponseEntity.noContent()
+            .header(HttpHeaders.SET_COOKIE, refreshTokenCookieProvider.clear().toString())
+            .build()
     }
 
     @GetMapping("/nickname/duplicate")

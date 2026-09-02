@@ -134,9 +134,23 @@ class UserService(
         user.changePassword(
             newPassword = passwordEncoder.encode(newPassword)!!,
         )
-        refreshTokenRepository.findAllByUserAndRevokedAtIsNull(
+        revokeRefreshTokens(
             user = user,
-        ).forEach { it.revoke() }
+        )
+    }
+
+    @Transactional
+    fun withdraw(
+        email: String,
+    ) {
+        val user = findUser(
+            email = email,
+        )
+
+        user.withdraw()
+        revokeRefreshTokens(
+            user = user,
+        )
     }
 
     private fun findUser(
@@ -144,4 +158,12 @@ class UserService(
     ): User = userRepository.findByEmail(
         email = email,
     ) ?: throw UserNotFoundException()
+
+    private fun revokeRefreshTokens(
+        user: User,
+    ) {
+        refreshTokenRepository.findAllByUserAndRevokedAtIsNull(
+            user = user,
+        ).forEach { it.revoke() }
+    }
 }

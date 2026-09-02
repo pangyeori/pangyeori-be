@@ -43,7 +43,7 @@ class User private constructor(
     val role: UserRole,
 
     @Column(nullable = false, length = 20)
-    val status: UserStatus,
+    var status: UserStatus,
 ) : BaseEntity() {
     fun changePassword(
         newPassword: String,
@@ -61,6 +61,10 @@ class User private constructor(
         newKey: String,
     ) {
         profileImageKey = newKey
+    }
+
+    fun withdraw() {
+        status = UserStatus.WITHDRAWN
     }
 
     companion object {
