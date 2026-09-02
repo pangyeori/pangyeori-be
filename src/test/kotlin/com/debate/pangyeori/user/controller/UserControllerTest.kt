@@ -701,4 +701,47 @@ class UserControllerTest : RestDocsMvcTest() {
             }
         }
     }
+
+    @Test
+    fun `회원 탈퇴한다`() {
+        val accessToken = issueAccessToken(
+            email = "withdraw@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/withdraw") {
+            summary("회원 탈퇴")
+            tag("Users")
+            request {
+                delete("/api/v1/users/me")
+                header("Authorization", "Bearer $accessToken")
+            }
+            response {
+                status(204)
+                header("Set-Cookie", "refresh token 만료 쿠키")
+            }
+        }
+    }
+
+    @Test
+    fun `인증 없이 회원 탈퇴하면 401을 반환한다`() {
+        restDocs(mockMvc, "users/withdraw-unauthorized") {
+            summary("회원 탈퇴")
+            tag("Users")
+            request {
+                delete("/api/v1/users/me")
+            }
+            response {
+                status(401)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
 }
