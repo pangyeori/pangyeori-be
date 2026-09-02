@@ -23,21 +23,29 @@ class UserControllerTest : RestDocsMvcTest() {
     @Autowired
     private lateinit var authService: AuthService
 
-    @Test
-    fun `로그인한 사용자가 내 정보를 조회한다`() {
-        val email = "mypage@pangyeori.com"
-        val password = "password123!"
+    private fun issueAccessToken(
+        email: String,
+        password: String = "password123!",
+        nickname: String = "테스트사용자",
+    ): String {
         userRepository.save(
             User.create(
                 email = email,
                 password = passwordEncoder.encode(password)!!,
-                nickname = "마이페이지사용자",
+                nickname = nickname,
             ),
         )
-        val accessToken = authService.signIn(
+        return authService.signIn(
             email = email,
             password = password,
         ).accessToken
+    }
+
+    @Test
+    fun `로그인한 사용자가 내 정보를 조회한다`() {
+        val accessToken = issueAccessToken(
+            email = "mypage@pangyeori.com",
+        )
 
         restDocs(mockMvc, "users/get-my-info") {
             summary("내 정보 조회")
@@ -393,6 +401,297 @@ class UserControllerTest : RestDocsMvcTest() {
                     obj("error", "에러 정보") {
                         field("code", "에러 코드")
                         field("message", "에러 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `닉네임을 변경한다`() {
+        val accessToken = issueAccessToken(
+            email = "update-nickname@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/update-profile") {
+            summary("회원정보 수정")
+            tag("Users")
+            request {
+                patch("/api/v1/users/me")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("nickname", "새로운닉네임", "변경할 닉네임").optional()
+                }
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "갱신된 사용자 정보") {
+                        field("id", "사용자 ID")
+                        field("email", "사용자 이메일")
+                        field("nickname", "사용자 닉네임")
+                        field("profileImageKey", "프로필 이미지 키").optional()
+                        field("joinedAt", "가입일자")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `프로필 이미지 키를 변경한다`() {
+        val accessToken = issueAccessToken(
+            email = "update-image@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/update-profile-image") {
+            summary("회원정보 수정")
+            tag("Users")
+            request {
+                patch("/api/v1/users/me")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("profileImageKey", "profile-images/2026/09/0000000000001.png", "storage에서 업로드한 이미지 키").optional()
+                }
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "갱신된 사용자 정보") {
+                        field("id", "사용자 ID")
+                        field("email", "사용자 이메일")
+                        field("nickname", "사용자 닉네임")
+                        field("profileImageKey", "프로필 이미지 키").optional()
+                        field("joinedAt", "가입일자")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `이미 사용 중인 닉네임으로 수정하면 409를 반환한다`() {
+        userRepository.save(
+            User.create(
+                email = "taken-nickname@pangyeori.com",
+                password = "encoded-password",
+                nickname = "선점닉네임",
+            ),
+        )
+        val accessToken = issueAccessToken(
+            email = "update-dup-nickname@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/update-profile-duplicate-nickname") {
+            summary("회원정보 수정")
+            tag("Users")
+            request {
+                patch("/api/v1/users/me")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("nickname", "선점닉네임", "이미 사용 중인 닉네임").optional()
+                }
+            }
+            response {
+                status(409)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `수정 시 닉네임 형식이 올바르지 않으면 400을 반환한다`() {
+        val accessToken = issueAccessToken(
+            email = "update-invalid-nickname@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/update-profile-invalid-nickname") {
+            summary("회원정보 수정")
+            tag("Users")
+            request {
+                patch("/api/v1/users/me")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("nickname", "판결이!", "특수문자가 포함된 닉네임").optional()
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `수정 시 이미지 키 형식이 올바르지 않으면 400을 반환한다`() {
+        val accessToken = issueAccessToken(
+            email = "update-invalid-key@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/update-profile-invalid-key") {
+            summary("회원정보 수정")
+            tag("Users")
+            request {
+                patch("/api/v1/users/me")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("profileImageKey", "documents/secret.png", "profile-images 계열이 아닌 키").optional()
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `인증 없이 회원정보를 수정하면 401을 반환한다`() {
+        restDocs(mockMvc, "users/update-profile-unauthorized") {
+            summary("회원정보 수정")
+            tag("Users")
+            request {
+                patch("/api/v1/users/me")
+                body {
+                    field("nickname", "새로운닉네임", "변경할 닉네임").optional()
+                }
+            }
+            response {
+                status(401)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `비밀번호를 변경한다`() {
+        val accessToken = issueAccessToken(
+            email = "change-password@pangyeori.com",
+            password = "password123!",
+        )
+
+        restDocs(mockMvc, "users/change-password") {
+            summary("비밀번호 변경")
+            tag("Users")
+            request {
+                patch("/api/v1/users/me/password")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("currentPassword", "password123!", "현재 비밀번호")
+                    field("newPassword", "newPassword1!", "새 비밀번호")
+                }
+            }
+            response {
+                status(204)
+            }
+        }
+    }
+
+    @Test
+    fun `현재 비밀번호가 일치하지 않으면 422를 반환한다`() {
+        val accessToken = issueAccessToken(
+            email = "change-password-mismatch@pangyeori.com",
+            password = "password123!",
+        )
+
+        restDocs(mockMvc, "users/change-password-invalid-current") {
+            summary("비밀번호 변경")
+            tag("Users")
+            request {
+                patch("/api/v1/users/me/password")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("currentPassword", "wrongPassword1!", "틀린 현재 비밀번호")
+                    field("newPassword", "newPassword1!", "새 비밀번호")
+                }
+            }
+            response {
+                status(422)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `새 비밀번호 형식이 올바르지 않으면 400을 반환한다`() {
+        val accessToken = issueAccessToken(
+            email = "change-password-invalid-new@pangyeori.com",
+            password = "password123!",
+        )
+
+        restDocs(mockMvc, "users/change-password-invalid-new") {
+            summary("비밀번호 변경")
+            tag("Users")
+            request {
+                patch("/api/v1/users/me/password")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("currentPassword", "password123!", "현재 비밀번호")
+                    field("newPassword", "short", "특수문자 없고 8자 미만인 새 비밀번호")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
                         array("details", "필드별 검증 오류 목록") {
                             field("field", "오류가 발생한 필드")
                             field("message", "필드 오류 메시지")

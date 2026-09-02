@@ -1,10 +1,14 @@
 package com.debate.pangyeori.user.service
 
+import com.debate.pangyeori.auth.domain.RefreshToken
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
+import com.debate.pangyeori.auth.repository.RefreshTokenRepository
 import com.debate.pangyeori.support.fixture.setAuditFields
 import com.debate.pangyeori.user.domain.User
+import com.debate.pangyeori.user.domain.enums.UserStatus
 import com.debate.pangyeori.user.exception.EmailAlreadyExistsException
 import com.debate.pangyeori.user.exception.EmailNotVerifiedException
+import com.debate.pangyeori.user.exception.InvalidCurrentPasswordException
 import com.debate.pangyeori.user.exception.NicknameAlreadyExistsException
 import com.debate.pangyeori.user.exception.UserNotFoundException
 import com.debate.pangyeori.user.repository.UserRepository
@@ -20,11 +24,13 @@ import org.springframework.security.crypto.password.PasswordEncoder
 class UserServiceTest : BehaviorSpec({
     val userRepository = mockk<UserRepository>()
     val emailVerificationRedisRepository = mockk<EmailVerificationRedisRepository>()
+    val refreshTokenRepository = mockk<RefreshTokenRepository>()
     val passwordEncoder = mockk<PasswordEncoder>()
 
     val userService = UserService(
         userRepository = userRepository,
         emailVerificationRedisRepository = emailVerificationRedisRepository,
+        refreshTokenRepository = refreshTokenRepository,
         passwordEncoder = passwordEncoder,
     )
 
@@ -40,9 +46,22 @@ class UserServiceTest : BehaviorSpec({
         clearMocks(
             userRepository,
             emailVerificationRedisRepository,
+            refreshTokenRepository,
             passwordEncoder,
         )
     }
+
+    fun activeUser(
+        currentNickname: String = nickname,
+        currentPassword: String = "encoded-password",
+    ): User = fixtureMonkey.giveMeKotlinBuilder<User>()
+        .set(User::id, "0000000000001")
+        .set(User::email, email)
+        .set(User::nickname, currentNickname)
+        .set(User::password, currentPassword)
+        .set(User::status, UserStatus.ACTIVE)
+        .sample()
+        .let(::setAuditFields)
 
     Given("이메일 인증을 완료한 사용자의 회원가입 요청이 오면") {
         When("이메일과 닉네임이 중복되지 않으면") {
@@ -241,6 +260,152 @@ class UserServiceTest : BehaviorSpec({
                     userService.getMyInfo(
                         email = email,
                     )
+                }
+            }
+        }
+    }
+
+    Given("로그인한 사용자가 회원정보를 수정할 때") {
+        When("새 닉네임이 중복되지 않으면") {
+            Then("닉네임을 변경하고 갱신된 정보를 반환한다") {
+                val user = activeUser()
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user
+                every {
+                    userRepository.existsByNickname(
+                        nickname = "새로운닉네임",
+                    )
+                } returns false
+
+                val response = userService.updateProfile(
+                    email = email,
+                    nickname = "새로운닉네임",
+                    profileImageKey = null,
+                )
+
+                user.nickname shouldBe "새로운닉네임"
+                response.nickname shouldBe "새로운닉네임"
+            }
+        }
+
+        When("새 닉네임이 이미 사용 중이면") {
+            Then("NicknameAlreadyExistsException을 던진다") {
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns activeUser()
+                every {
+                    userRepository.existsByNickname(
+                        nickname = "중복닉네임",
+                    )
+                } returns true
+
+                shouldThrow<NicknameAlreadyExistsException> {
+                    userService.updateProfile(
+                        email = email,
+                        nickname = "중복닉네임",
+                        profileImageKey = null,
+                    )
+                }
+            }
+        }
+
+        When("현재 닉네임과 동일한 값이면") {
+            Then("중복 검증 없이 통과한다") {
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns activeUser(currentNickname = nickname)
+
+                userService.updateProfile(
+                    email = email,
+                    nickname = nickname,
+                    profileImageKey = null,
+                )
+
+                verify(exactly = 0) {
+                    userRepository.existsByNickname(nickname = any())
+                }
+            }
+        }
+
+        When("프로필 이미지 키가 주어지면") {
+            Then("프로필 이미지 키를 변경한다") {
+                val user = activeUser()
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user
+
+                userService.updateProfile(
+                    email = email,
+                    nickname = null,
+                    profileImageKey = "profile-images/2026/09/0000000000001.png",
+                )
+
+                user.profileImageKey shouldBe "profile-images/2026/09/0000000000001.png"
+            }
+        }
+    }
+
+    Given("로그인한 사용자가 비밀번호를 변경할 때") {
+        When("현재 비밀번호가 일치하지 않으면") {
+            Then("InvalidCurrentPasswordException을 던진다") {
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns activeUser(currentPassword = "encoded-current")
+                every {
+                    passwordEncoder.matches("wrong", "encoded-current")
+                } returns false
+
+                shouldThrow<InvalidCurrentPasswordException> {
+                    userService.changePassword(
+                        email = email,
+                        currentPassword = "wrong",
+                        newPassword = "newPassword1!",
+                    )
+                }
+            }
+        }
+
+        When("현재 비밀번호가 일치하면") {
+            Then("비밀번호를 새 해시로 바꾸고 모든 refresh token을 revoke한다") {
+                val user = activeUser(currentPassword = "encoded-current")
+                val refreshToken = mockk<RefreshToken>(relaxed = true)
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user
+                every {
+                    passwordEncoder.matches("current!", "encoded-current")
+                } returns true
+                every {
+                    passwordEncoder.encode("newPassword1!")
+                } returns "encoded-new"
+                every {
+                    refreshTokenRepository.findAllByUserAndRevokedAtIsNull(
+                        user = user,
+                    )
+                } returns listOf(refreshToken)
+
+                userService.changePassword(
+                    email = email,
+                    currentPassword = "current!",
+                    newPassword = "newPassword1!",
+                )
+
+                user.password shouldBe "encoded-new"
+                verify {
+                    refreshToken.revoke()
                 }
             }
         }
