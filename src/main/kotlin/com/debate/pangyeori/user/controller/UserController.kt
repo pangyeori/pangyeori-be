@@ -74,6 +74,17 @@ class UserController(
         )
     }
 
+    @DeleteMapping("/me/profile-image")
+    fun removeProfileImage(
+        principal: Principal,
+    ): ResponseEntity<Void> {
+        userService.removeProfileImage(
+            email = principal.name,
+        )
+
+        return ResponseEntity.noContent().build()
+    }
+
     @PatchMapping("/me/password")
     fun changePassword(
         principal: Principal,

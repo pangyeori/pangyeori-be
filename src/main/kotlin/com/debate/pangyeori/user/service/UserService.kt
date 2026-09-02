@@ -118,6 +118,17 @@ class UserService(
     }
 
     @Transactional
+    fun removeProfileImage(
+        email: String,
+    ) {
+        val user = findUser(
+            email = email,
+        )
+
+        user.removeProfileImage()
+    }
+
+    @Transactional
     fun changePassword(
         email: String,
         currentPassword: String,

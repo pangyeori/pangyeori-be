@@ -63,6 +63,10 @@ class User private constructor(
         profileImageKey = newKey
     }
 
+    fun removeProfileImage() {
+        profileImageKey = null
+    }
+
     fun withdraw() {
         status = UserStatus.WITHDRAWN
     }
