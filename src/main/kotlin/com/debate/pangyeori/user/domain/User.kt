@@ -28,12 +28,12 @@ class User private constructor(
     val id: String? = null,
 
     @Column(nullable = false, length = 255)
-    val email: String,
+    var email: String,
 
     @Column(name = "password", nullable = false, length = 255)
     var password: String,
 
-    @Column(nullable = false, length = 12)
+    @Column(nullable = false, length = 20)
     var nickname: String,
 
     @Column(name = "profile_image_key", length = 500)
@@ -67,8 +67,18 @@ class User private constructor(
         profileImageKey = null
     }
 
+    /**
+     * 회원 탈퇴 상태로 변경하고 개인정보 식별에 사용되는 값을 비식별화한다.
+     * 실제 soft delete(`deleted_at`)는 repository의 `@SQLDelete`가 담당한다.
+     *
+     * - `status`를 `WITHDRAWN`으로 변경해 soft delete된 회원의 탈퇴 상태를 표시한다.
+     * - soft delete 후에도 unique 제약은 남으므로, `email`/`nickname`을
+     *   기존 활성 값과 충돌하지 않는 형태(`@` 없음 / `_` 포함)로 변경해 재가입을 허용한다.
+     */
     fun withdraw() {
         status = UserStatus.WITHDRAWN
+        email = "withdrawn-$id"
+        nickname = "del_$id"
     }
 
     companion object {

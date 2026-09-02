@@ -158,10 +158,12 @@ class UserService(
             email = email,
         )
 
-        user.withdraw()
         revokeRefreshTokens(
             user = user,
         )
+        user.withdraw()
+        userRepository.flush()
+        userRepository.delete(user)
     }
 
     private fun findUser(
