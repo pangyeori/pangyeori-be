@@ -27,7 +27,6 @@ class AuthControllerTest : RestDocsMvcTest() {
                 email = "signin@pangyeori.com",
                 password = passwordEncoder.encode("password123!")!!,
                 nickname = "로그인사용자",
-                profileImageUrl = null,
             ),
         )
 
@@ -63,7 +62,6 @@ class AuthControllerTest : RestDocsMvcTest() {
                 email = "wrong-password@pangyeori.com",
                 password = passwordEncoder.encode("password123!")!!,
                 nickname = "비밀번호오류",
-                profileImageUrl = null,
             ),
         )
 
@@ -128,7 +126,6 @@ class AuthControllerTest : RestDocsMvcTest() {
                 email = email,
                 password = passwordEncoder.encode(password)!!,
                 nickname = "재발급사용자",
-                profileImageUrl = null,
             ),
         )
         val refreshToken = authService.signIn(
@@ -169,7 +166,6 @@ class AuthControllerTest : RestDocsMvcTest() {
                 email = email,
                 password = passwordEncoder.encode(password)!!,
                 nickname = "로그아웃사용자",
-                profileImageUrl = null,
             ),
         )
         val refreshToken = authService.signIn(

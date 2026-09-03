@@ -35,7 +35,6 @@ class StorageControllerTest : RestDocsMvcTest() {
                 email = email,
                 password = passwordEncoder.encode(password)!!,
                 nickname = "스토리지사용자",
-                profileImageUrl = null,
             ),
         )
         return authService.signIn(
