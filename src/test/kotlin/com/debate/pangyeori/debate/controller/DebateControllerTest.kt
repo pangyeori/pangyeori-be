@@ -1,20 +1,19 @@
 package com.debate.pangyeori.debate.controller
 
 import com.debate.pangyeori.auth.service.AuthService
-import com.debate.pangyeori.debate.service.DebateService
-import com.debate.pangyeori.debate.service.DebateParticipationService
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.repository.DebateRepository
+import com.debate.pangyeori.debate.service.DebateParticipationService
+import com.debate.pangyeori.debate.service.DebateService
 import com.debate.pangyeori.support.RestDocsMvcTest
-import com.debate.pangyeori.support.dsl.ResponseDsl
 import com.debate.pangyeori.support.dsl.restDocs
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.repository.UserRepository
+import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.jdbc.core.JdbcTemplate
-import jakarta.persistence.EntityManager
+import org.springframework.security.crypto.password.PasswordEncoder
 
 class DebateControllerTest : RestDocsMvcTest() {
     @Autowired
@@ -130,7 +129,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(400)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -157,7 +164,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(400)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -184,7 +199,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(400)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -398,7 +421,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(410)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -431,7 +462,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(422)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -468,7 +507,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(409)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -504,7 +551,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(404)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -541,7 +596,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(403)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -589,7 +652,15 @@ class DebateControllerTest : RestDocsMvcTest() {
                 }
                 response {
                     status(409)
-                    businessErrorBody()
+                    body {
+                        field("success", "처리 성공 여부")
+                        field("data", "응답 데이터").optional()
+                        obj("error", "오류 정보") {
+                            field("code", "오류 코드")
+                            field("message", "오류 메시지")
+                            field("details", "필드별 검증 오류 목록").optional()
+                        }
+                    }
                 }
             }
         }
@@ -638,7 +709,15 @@ class DebateControllerTest : RestDocsMvcTest() {
                 }
                 response {
                     status(409)
-                    businessErrorBody()
+                    body {
+                        field("success", "처리 성공 여부")
+                        field("data", "응답 데이터").optional()
+                        obj("error", "오류 정보") {
+                            field("code", "오류 코드")
+                            field("message", "오류 메시지")
+                            field("details", "필드별 검증 오류 목록").optional()
+                        }
+                    }
                 }
             }
         }
@@ -679,7 +758,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(403)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -718,7 +805,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(409)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -770,7 +865,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(409)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
 
@@ -792,7 +895,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(409)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -859,7 +970,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(409)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -902,7 +1021,15 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(410)
-                businessErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
             }
         }
     }
@@ -936,7 +1063,18 @@ class DebateControllerTest : RestDocsMvcTest() {
             }
             response {
                 status(400)
-                validationErrorBody()
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "검증 실패 필드")
+                            field("message", "검증 실패 메시지")
+                        }
+                    }
+                }
             }
         }
     }
@@ -958,32 +1096,5 @@ class DebateControllerTest : RestDocsMvcTest() {
             email = email,
             password = password,
         ).accessToken
-    }
-}
-
-private fun ResponseDsl.businessErrorBody() {
-    body {
-        field("success", "처리 성공 여부")
-        field("data", "응답 데이터").optional()
-        obj("error", "오류 정보") {
-            field("code", "오류 코드")
-            field("message", "오류 메시지")
-            field("details", "필드별 검증 오류 목록").optional()
-        }
-    }
-}
-
-private fun ResponseDsl.validationErrorBody() {
-    body {
-        field("success", "처리 성공 여부")
-        field("data", "응답 데이터").optional()
-        obj("error", "오류 정보") {
-            field("code", "오류 코드")
-            field("message", "오류 메시지")
-            array("details", "필드별 검증 오류 목록") {
-                field("field", "검증 실패 필드")
-                field("message", "검증 실패 메시지")
-            }
-        }
     }
 }
