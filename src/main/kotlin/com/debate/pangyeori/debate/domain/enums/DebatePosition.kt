@@ -6,8 +6,7 @@ enum class DebatePosition(
     override val code: String,
 ) : CodeEnum {
     PROS("PROS"),
-    CONS("CONS"),
-    ;
+    CONS("CONS");
 
     fun opposite() = when (this) {
         PROS -> CONS
