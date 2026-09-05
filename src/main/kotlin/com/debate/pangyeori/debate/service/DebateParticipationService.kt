@@ -5,7 +5,7 @@ import com.debate.pangyeori.debate.domain.DebateUser
 import com.debate.pangyeori.debate.domain.enums.*
 import com.debate.pangyeori.debate.dto.response.*
 import com.debate.pangyeori.debate.event.DebateQueueChangedEvent
-import com.debate.pangyeori.debate.event.DebateQueueOperation
+import com.debate.pangyeori.debate.event.DebateQueueChangedEvent.DebateQueueOperation
 import com.debate.pangyeori.debate.event.DebateStatusChangedEvent
 import com.debate.pangyeori.debate.exception.*
 import com.debate.pangyeori.debate.repository.DebateInviteRedisRepository

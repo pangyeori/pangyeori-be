@@ -1,5 +1,6 @@
 package com.debate.pangyeori.debate.event
 
+import com.debate.pangyeori.debate.event.DebateQueueChangedEvent.DebateQueueOperation
 import com.debate.pangyeori.debate.repository.DebateQueueRedisRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
