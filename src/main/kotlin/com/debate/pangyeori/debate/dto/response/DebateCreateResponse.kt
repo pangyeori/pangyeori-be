@@ -1,7 +1,6 @@
 package com.debate.pangyeori.debate.dto.response
 
 import com.debate.pangyeori.debate.domain.Debate
-import com.debate.pangyeori.debate.domain.DebateUser
 import com.debate.pangyeori.debate.domain.enums.DebatePosition
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 
@@ -15,12 +14,10 @@ data class DebateCreateResponse(
     val turnTimeSeconds: Int,
     val freeDebateTimeSeconds: Int,
     val inviteToken: String,
-    val members: List<DebateMemberResponse>,
 ) {
     companion object {
         fun from(
             debate: Debate,
-            hostMember: DebateUser,
         ) = DebateCreateResponse(
             id = debate.id!!,
             title = debate.title,
@@ -31,11 +28,6 @@ data class DebateCreateResponse(
             turnTimeSeconds = debate.turnTimeSeconds,
             freeDebateTimeSeconds = debate.freeDebateTimeSeconds,
             inviteToken = debate.inviteToken,
-            members = listOf(
-                DebateMemberResponse.from(
-                    debateUser = hostMember,
-                ),
-            ),
         )
     }
 }

@@ -58,7 +58,7 @@ class DebateService(
                 inviteToken = inviteToken,
             ),
         )
-        val hostMember = debateUserRepository.save(
+        debateUserRepository.save(
             DebateUser.create(
                 debate = debate,
                 user = host,
@@ -76,7 +76,6 @@ class DebateService(
 
         return DebateCreateResponse.from(
             debate = debate,
-            hostMember = hostMember,
         )
     }
 
