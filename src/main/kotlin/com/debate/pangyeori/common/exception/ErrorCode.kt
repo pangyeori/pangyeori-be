@@ -10,6 +10,9 @@ enum class ErrorCode(
     DEBATE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 토론입니다."),
     DEBATE_STAGE_CONFLICT(HttpStatus.UNPROCESSABLE_ENTITY, "현재 단계에서 허용되지 않는 작업입니다."),
     DEBATE_ALREADY_FINISHED(HttpStatus.UNPROCESSABLE_ENTITY, "이미 종료된 토론입니다."),
+    INVALID_POSITION(HttpStatus.BAD_REQUEST, "유효하지 않은 포지션입니다."),
+    INVALID_TURN_TIME(HttpStatus.BAD_REQUEST, "턴 시간은 30초 이상 600초 이하여야 합니다."),
+    INVALID_FREE_DEBATE_TIME(HttpStatus.BAD_REQUEST, "자유 토론 시간은 60초 이상 1800초 이하여야 합니다."),
 
     // 사용자
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
