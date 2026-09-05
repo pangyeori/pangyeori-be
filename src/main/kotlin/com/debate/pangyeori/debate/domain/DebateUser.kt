@@ -8,6 +8,7 @@ import jakarta.persistence.*
 import org.hibernate.annotations.SQLDelete
 import org.hibernate.annotations.SQLRestriction
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 @Entity
 @Table(
@@ -41,27 +42,41 @@ class DebateUser private constructor(
     val position: DebatePosition,
 
     @Column(nullable = false, length = 20)
-    val status: DebateUserStatus,
+    var status: DebateUserStatus,
 
     @Column(name = "disconnect_count", nullable = false)
     val disconnectCount: Int,
 
     @Column(name = "joined_at")
-    val joinedAt: LocalDateTime?,
+    var joinedAt: LocalDateTime?,
 ) : BaseEntity() {
+    fun accept() {
+        status = DebateUserStatus.ACCEPTED
+        joinedAt = LocalDateTime.now(ZoneOffset.UTC)
+    }
+
+    fun reject() {
+        status = DebateUserStatus.REJECTED
+    }
+
+    fun cancel() {
+        status = DebateUserStatus.CANCELLED
+    }
+
     companion object {
         fun create(
             debate: Debate,
             user: User,
+            role: DebateUserRole,
             position: DebatePosition,
         ) = DebateUser(
             debate = debate,
             user = user,
-            role = DebateUserRole.HOST,
+            role = role,
             position = position,
-            status = DebateUserStatus.ACCEPTED,
+            status = if (role == DebateUserRole.HOST) DebateUserStatus.ACCEPTED else DebateUserStatus.PENDING,
             disconnectCount = 0,
-            joinedAt = LocalDateTime.now(),
+            joinedAt = if (role == DebateUserRole.HOST) LocalDateTime.now(ZoneOffset.UTC) else null,
         )
     }
 }

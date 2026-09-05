@@ -3,6 +3,7 @@ package com.debate.pangyeori.debate.service
 import com.debate.pangyeori.debate.domain.Debate
 import com.debate.pangyeori.debate.domain.DebateUser
 import com.debate.pangyeori.debate.domain.enums.DebatePosition
+import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 import com.debate.pangyeori.debate.dto.response.DebateCreateResponse
 import com.debate.pangyeori.debate.event.DebateCreatedEvent
 import com.debate.pangyeori.debate.exception.InvalidFreeDebateTimeException
@@ -61,6 +62,7 @@ class DebateService(
             DebateUser.create(
                 debate = debate,
                 user = host,
+                role = DebateUserRole.HOST,
                 position = validatedPosition,
             ),
         )

@@ -31,7 +31,7 @@ class Debate private constructor(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "guest_id", foreignKey = ForeignKey(ConstraintMode.NO_CONSTRAINT))
-    val guest: User? = null,
+    var guest: User? = null,
 
     @Column(nullable = false, length = 100)
     val title: String,
@@ -43,7 +43,7 @@ class Debate private constructor(
     val hostPosition: DebatePosition,
 
     @Column(nullable = false, length = 20)
-    val status: DebateStatus,
+    var status: DebateStatus,
 
     @Column(name = "current_stage", nullable = false, length = 30)
     val currentStage: DebateStage,
@@ -60,6 +60,13 @@ class Debate private constructor(
     @Column(name = "invite_token", length = 36)
     val inviteToken: String,
 ) : BaseEntity() {
+    fun acceptGuest(
+        selectedGuest: User,
+    ) {
+        guest = selectedGuest
+        status = DebateStatus.READY
+    }
+
     companion object {
         fun create(
             host: User,
