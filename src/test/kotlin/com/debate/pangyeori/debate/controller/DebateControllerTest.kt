@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.crypto.password.PasswordEncoder
 
 class DebateControllerTest : RestDocsMvcTest() {
+
     @Autowired
     private lateinit var userRepository: UserRepository
 
@@ -36,6 +37,25 @@ class DebateControllerTest : RestDocsMvcTest() {
 
     @Autowired
     private lateinit var entityAuditIntegrationTestSupport: EntityAuditIntegrationTestSupport
+
+    private fun issueAccessToken(
+        email: String,
+        nickname: String,
+    ): String {
+        val password = "password123!"
+        userRepository.save(
+            User.create(
+                email = email,
+                password = passwordEncoder.encode(password)!!,
+                nickname = nickname,
+            ),
+        )
+
+        return authService.signIn(
+            email = email,
+            password = password,
+        ).accessToken
+    }
 
     @Test
     fun `토론방을 생성한다`() {
@@ -134,7 +154,7 @@ class DebateControllerTest : RestDocsMvcTest() {
 
     @Test
     fun `자유 토론 시간이 허용 범위를 벗어나면 INVALID_FREE_DEBATE_TIME을 반환한다`() {
-        val accessToken = createHostAndSignIn(
+        val accessToken = issueAccessToken(
             email = "invalid-free-time-host@pangyeori.com",
             nickname = "자유시간방장",
         )
@@ -169,7 +189,7 @@ class DebateControllerTest : RestDocsMvcTest() {
 
     @Test
     fun `포지션이 유효하지 않으면 INVALID_POSITION을 반환한다`() {
-        val accessToken = createHostAndSignIn(
+        val accessToken = issueAccessToken(
             email = "invalid-position-host@pangyeori.com",
             nickname = "포지션방장",
         )
@@ -302,12 +322,12 @@ class DebateControllerTest : RestDocsMvcTest() {
                     obj("data", "참여 상태") {
                         field("debateStatus", "토론방 상태")
                         field("guestStatus", "요청자의 참여 상태").optional()
-                        array("requestList", "대기 중인 참여 요청") {
+                        array("requestList", "대기 중인 참여 요청 (호스트만 조회 가능)") {
                             field("userId", "사용자 ID")
                             field("nickname", "사용자 닉네임")
                             field("status", "참여 상태")
                             field("requestedAt", "참여 요청 시각")
-                        }
+                        }.optional()
                     }
                     field("error", "오류 정보").optional()
                 }
@@ -334,6 +354,61 @@ class DebateControllerTest : RestDocsMvcTest() {
                     obj("data", "게스트 선택 결과") {
                         field("debateId", "토론방 ID")
                         field("status", "토론방 상태")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `게스트가 자신의 참여 상태를 조회한다`() {
+        val hostEmail = "guest-status-host@pangyeori.com"
+        issueAccessToken(
+            email = hostEmail,
+            nickname = "게스트상태방장",
+        )
+        val guestEmail = "guest-status-guest@pangyeori.com"
+        val guestToken = issueAccessToken(
+            email = guestEmail,
+            nickname = "게스트상태게스트",
+        )
+        val debate = debateService.create(
+            hostEmail = hostEmail,
+            title = "게스트 상태 조회 검증",
+            description = null,
+            hostPosition = "PROS",
+            turnTimeSeconds = 180,
+            freeDebateTimeSeconds = 600,
+        )
+        debateParticipationService.requestParticipation(
+            debateId = debate.id,
+            userEmail = guestEmail,
+        )
+
+        restDocs(mockMvc, "debates/get-status-guest") {
+            summary("토론방 참여 상태 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/{debateId}/status")
+                header("Authorization", "Bearer $guestToken")
+                pathParameters {
+                    param("debateId", debate.id, "토론방 ID")
+                }
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "참여 상태") {
+                        field("debateStatus", "토론방 상태")
+                        field("guestStatus", "요청자의 참여 상태").optional()
+                        array("requestList", "대기 중인 참여 요청 (호스트만 조회 가능)") {
+                            field("userId", "사용자 ID")
+                            field("nickname", "사용자 닉네임")
+                            field("status", "참여 상태")
+                            field("requestedAt", "참여 요청 시각")
+                        }.optional()
                     }
                     field("error", "오류 정보").optional()
                 }
@@ -394,7 +469,7 @@ class DebateControllerTest : RestDocsMvcTest() {
 
     @Test
     fun `만료된 초대 토큰이면 INVITE_TOKEN_EXPIRED를 반환한다`() {
-        val accessToken = createHostAndSignIn(
+        val accessToken = issueAccessToken(
             email = "expired-invitation@pangyeori.com",
             nickname = "만료확인자",
         )
@@ -427,7 +502,7 @@ class DebateControllerTest : RestDocsMvcTest() {
     @Test
     fun `개설자가 자신의 토론방에 참여 요청하면 SELF_JOIN_NOT_ALLOWED를 반환한다`() {
         val email = "self-join-host@pangyeori.com"
-        val accessToken = createHostAndSignIn(
+        val accessToken = issueAccessToken(
             email = email,
             nickname = "자기참여방장",
         )
@@ -468,11 +543,11 @@ class DebateControllerTest : RestDocsMvcTest() {
     @Test
     fun `대기 중인 요청이 없으면 NOT_IN_PENDING_STATUS를 반환한다`() {
         val hostEmail = "cancel-error-host@pangyeori.com"
-        createHostAndSignIn(
+        issueAccessToken(
             email = hostEmail,
             nickname = "취소오류방장",
         )
-        val guestToken = createHostAndSignIn(
+        val guestToken = issueAccessToken(
             email = "cancel-error-guest@pangyeori.com",
             nickname = "취소오류게스트",
         )
@@ -513,7 +588,7 @@ class DebateControllerTest : RestDocsMvcTest() {
     @Test
     fun `대기열에 없는 게스트를 선택하면 USER_NOT_FOUND_IN_QUEUE를 반환한다`() {
         val hostEmail = "accept-error-host@pangyeori.com"
-        val hostToken = createHostAndSignIn(
+        val hostToken = issueAccessToken(
             email = hostEmail,
             nickname = "선택오류방장",
         )
@@ -557,11 +632,11 @@ class DebateControllerTest : RestDocsMvcTest() {
     @Test
     fun `참여 이력이 없는 사용자가 상태를 조회하면 접근 권한 오류를 반환한다`() {
         val hostEmail = "status-error-host@pangyeori.com"
-        createHostAndSignIn(
+        issueAccessToken(
             email = hostEmail,
             nickname = "상태오류방장",
         )
-        val strangerToken = createHostAndSignIn(
+        val strangerToken = issueAccessToken(
             email = "status-error-stranger@pangyeori.com",
             nickname = "상태외부인",
         )
@@ -601,7 +676,7 @@ class DebateControllerTest : RestDocsMvcTest() {
 
     @Test
     fun `초대 링크 조회 시 토론방 상태에 맞는 충돌 오류를 반환한다`() {
-        val guestToken = createHostAndSignIn(
+        val guestToken = issueAccessToken(
             email = "invitation-state-guest@pangyeori.com",
             nickname = "초대상태게스트",
         )
@@ -614,7 +689,7 @@ class DebateControllerTest : RestDocsMvcTest() {
 
         states.forEachIndexed { index, status ->
             val hostEmail = "invitation-state-host-$index@pangyeori.com"
-            createHostAndSignIn(
+            issueAccessToken(
                 email = hostEmail,
                 nickname = "초대상태방장$index",
             )
@@ -658,7 +733,7 @@ class DebateControllerTest : RestDocsMvcTest() {
 
     @Test
     fun `참여 요청 시 토론방 상태에 맞는 충돌 오류를 반환한다`() {
-        val guestToken = createHostAndSignIn(
+        val guestToken = issueAccessToken(
             email = "request-state-guest@pangyeori.com",
             nickname = "요청상태게스트",
         )
@@ -671,7 +746,7 @@ class DebateControllerTest : RestDocsMvcTest() {
 
         states.forEachIndexed { index, status ->
             val hostEmail = "request-state-host-$index@pangyeori.com"
-            createHostAndSignIn(
+            issueAccessToken(
                 email = hostEmail,
                 nickname = "요청상태방장$index",
             )
@@ -716,11 +791,11 @@ class DebateControllerTest : RestDocsMvcTest() {
     @Test
     fun `비개설자가 게스트를 선택하면 접근 권한 오류를 반환한다`() {
         val hostEmail = "accept-forbidden-host@pangyeori.com"
-        createHostAndSignIn(
+        issueAccessToken(
             email = hostEmail,
             nickname = "권한검증방장",
         )
-        val guestToken = createHostAndSignIn(
+        val guestToken = issueAccessToken(
             email = "accept-forbidden-guest@pangyeori.com",
             nickname = "권한검증게스트",
         )
@@ -764,7 +839,7 @@ class DebateControllerTest : RestDocsMvcTest() {
     @Test
     fun `WAITING 상태가 아니면 게스트를 선택할 수 없다`() {
         val hostEmail = "accept-state-host@pangyeori.com"
-        val hostToken = createHostAndSignIn(
+        val hostToken = issueAccessToken(
             email = hostEmail,
             nickname = "선택상태방장",
         )
@@ -976,11 +1051,11 @@ class DebateControllerTest : RestDocsMvcTest() {
     @Test
     fun `만료된 토론방에 참여 요청하면 INVITE_TOKEN_EXPIRED를 반환한다`() {
         val hostEmail = "expired-request-host@pangyeori.com"
-        createHostAndSignIn(
+        issueAccessToken(
             email = hostEmail,
             nickname = "만료요청방장",
         )
-        val guestToken = createHostAndSignIn(
+        val guestToken = issueAccessToken(
             email = "expired-request-guest@pangyeori.com",
             nickname = "만료요청게스트",
         )
@@ -1026,7 +1101,7 @@ class DebateControllerTest : RestDocsMvcTest() {
     @Test
     fun `게스트 선택 시 사용자 ID가 없으면 입력값 검증 오류를 반환한다`() {
         val hostEmail = "accept-validation-host@pangyeori.com"
-        val hostToken = createHostAndSignIn(
+        val hostToken = issueAccessToken(
             email = hostEmail,
             nickname = "선택검증방장",
         )
@@ -1066,24 +1141,5 @@ class DebateControllerTest : RestDocsMvcTest() {
                 }
             }
         }
-    }
-
-    private fun createHostAndSignIn(
-        email: String,
-        nickname: String,
-    ): String {
-        val password = "password123!"
-        userRepository.save(
-            User.create(
-                email = email,
-                password = passwordEncoder.encode(password)!!,
-                nickname = nickname,
-            ),
-        )
-
-        return authService.signIn(
-            email = email,
-            password = password,
-        ).accessToken
     }
 }
