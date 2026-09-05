@@ -1,7 +1,5 @@
 package com.debate.pangyeori.debate.event
 
-import com.debate.pangyeori.debate.repository.DebateInviteRedisRepository
-import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.repository.DebateStatusRedisRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
@@ -9,27 +7,22 @@ import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
 
 @Component
-class DebateCreatedEventHandler(
-    private val debateInviteRedisRepository: DebateInviteRedisRepository,
+class DebateStatusChangedEventHandler(
     private val debateStatusRedisRepository: DebateStatusRedisRepository,
 ) {
     private val logger = KotlinLogging.logger {}
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun handle(
-        event: DebateCreatedEvent,
+        event: DebateStatusChangedEvent,
     ) {
         runCatching {
-            debateInviteRedisRepository.save(
-                token = event.inviteToken,
-                debateId = event.debateId,
-            )
             debateStatusRedisRepository.save(
                 debateId = event.debateId,
-                status = DebateStatus.WAITING,
+                status = event.status,
             )
         }.onFailure {
-            logger.warn(it) { "토론방 생성 캐시 저장에 실패했습니다. debateId=${event.debateId}" }
+            logger.warn(it) { "토론방 상태 캐시 갱신에 실패했습니다. debateId=${event.debateId}" }
         }
     }
 }

@@ -22,6 +22,14 @@ class DebateInviteRedisRepository(
         redisTemplate.opsForValue().set(tokenKey(token), value, INVITE_TOKEN_TTL)
     }
 
+    fun findDebateId(
+        token: String,
+    ): String? {
+        val value = redisTemplate.opsForValue().get(tokenKey(token)) ?: return null
+
+        return objectMapper.readValue(value, InviteTokenValue::class.java).debateId
+    }
+
     private fun tokenKey(
         token: String,
     ) = "$TOKEN_KEY_PREFIX$token"

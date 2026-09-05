@@ -14,4 +14,9 @@ interface DebateUserRepository : JpaRepository<DebateUser, String> {
         debateId: String,
         status: DebateUserStatus,
     ): List<DebateUser>
+
+    fun findAllByDebateIdAndStatus(
+        debateId: String,
+        status: DebateUserStatus,
+    ): List<DebateUser>
 }
