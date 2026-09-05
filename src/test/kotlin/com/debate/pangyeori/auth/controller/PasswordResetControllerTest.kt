@@ -31,7 +31,6 @@ class PasswordResetControllerTest : RestDocsMvcTest() {
                 email = email,
                 password = passwordEncoder.encode("password123!")!!,
                 nickname = "재설정사용자1",
-                profileImageUrl = null,
             ),
         )
         emailVerificationRedisRepository.markVerified(
@@ -154,7 +153,6 @@ class PasswordResetControllerTest : RestDocsMvcTest() {
                 email = email,
                 password = passwordEncoder.encode("password123!")!!,
                 nickname = "재설정사용자2",
-                profileImageUrl = null,
             ),
         )
         emailVerificationRedisRepository.markVerified(
@@ -220,7 +218,6 @@ class PasswordResetControllerTest : RestDocsMvcTest() {
                 email = email,
                 password = passwordEncoder.encode("password123!")!!,
                 nickname = "재설정사용자3",
-                profileImageUrl = null,
             ),
         )
         emailVerificationRedisRepository.markVerified(

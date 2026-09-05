@@ -29,6 +29,12 @@ class LoggingObjectStorage : ObjectStorage {
         return "$LOCAL_BASE_URL/$objectKey"
     }
 
+    override fun deleteObject(
+        objectKey: String,
+    ) {
+        logger.info { "[local] 객체 삭제 생략. objectKey=$objectKey" }
+    }
+
     companion object {
         private const val LOCAL_BASE_URL = "https://local.example"
     }

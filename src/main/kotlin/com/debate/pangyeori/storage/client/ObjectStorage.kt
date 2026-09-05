@@ -14,4 +14,8 @@ interface ObjectStorage {
         objectKey: String,
         expiry: Duration,
     ): String
+
+    fun deleteObject(
+        objectKey: String,
+    )
 }
