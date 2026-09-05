@@ -81,13 +81,6 @@ class DebateControllerTest : RestDocsMvcTest() {
                         field("turnTimeSeconds", "턴당 발언 제한 시간")
                         field("freeDebateTimeSeconds", "자유 토론 제한 시간")
                         field("inviteToken", "UUID v4 초대 토큰")
-                        array("members", "토론방 참여자") {
-                            field("userId", "사용자 ID")
-                            field("nickname", "사용자 닉네임")
-                            field("role", "참여자 역할")
-                            field("position", "참여자 포지션")
-                            field("status", "참여 상태")
-                        }
                     }
                     field("error", "오류 정보").optional()
                 }

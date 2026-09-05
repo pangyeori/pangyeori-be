@@ -94,7 +94,6 @@ class DebateServiceTest : BehaviorSpec({
 
                 response.id shouldBe savedDebate.id
                 response.guestPosition shouldBe DebatePosition.CONS
-                response.members.single().role shouldBe DebateUserRole.HOST
                 eventSlot.captured.debateId shouldBe savedDebate.id
                 eventSlot.captured.inviteToken.length shouldBe 36
             }
