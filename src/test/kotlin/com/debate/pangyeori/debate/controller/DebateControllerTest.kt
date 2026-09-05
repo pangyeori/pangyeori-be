@@ -1,18 +1,18 @@
 package com.debate.pangyeori.debate.controller
 
 import com.debate.pangyeori.auth.service.AuthService
+import com.debate.pangyeori.debate.domain.Debate
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.service.DebateParticipationService
 import com.debate.pangyeori.debate.service.DebateService
 import com.debate.pangyeori.support.RestDocsMvcTest
 import com.debate.pangyeori.support.dsl.restDocs
+import com.debate.pangyeori.support.fixture.EntityAuditIntegrationTestSupport
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.repository.UserRepository
-import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.security.crypto.password.PasswordEncoder
 
 class DebateControllerTest : RestDocsMvcTest() {
@@ -35,10 +35,7 @@ class DebateControllerTest : RestDocsMvcTest() {
     private lateinit var debateRepository: DebateRepository
 
     @Autowired
-    private lateinit var jdbcTemplate: JdbcTemplate
-
-    @Autowired
-    private lateinit var entityManager: EntityManager
+    private lateinit var entityAuditIntegrationTestSupport: EntityAuditIntegrationTestSupport
 
     @Test
     fun `토론방을 생성한다`() {
@@ -1002,12 +999,11 @@ class DebateControllerTest : RestDocsMvcTest() {
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
-        entityManager.flush()
-        jdbcTemplate.update(
-            "UPDATE debates SET created_at = DATE_SUB(UTC_TIMESTAMP(), INTERVAL 48 HOUR) WHERE id = ?",
-            debate.id,
+        entityAuditIntegrationTestSupport.backdateCreatedAt(
+            entityClass = Debate::class,
+            id = debate.id,
+            hours = 48,
         )
-        entityManager.clear()
 
         restDocs(mockMvc, "debates/request-participation-expired") {
             summary("토론방 참여 요청")
