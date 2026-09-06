@@ -6,11 +6,7 @@ import com.debate.pangyeori.storage.client.ObjectStorage
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.dto.response.NicknameDuplicateResponse
 import com.debate.pangyeori.user.dto.response.UserResponse
-import com.debate.pangyeori.user.exception.EmailAlreadyExistsException
-import com.debate.pangyeori.user.exception.EmailNotVerifiedException
-import com.debate.pangyeori.user.exception.InvalidCurrentPasswordException
-import com.debate.pangyeori.user.exception.NicknameAlreadyExistsException
-import com.debate.pangyeori.user.exception.UserNotFoundException
+import com.debate.pangyeori.user.exception.*
 import com.debate.pangyeori.user.repository.UserRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -178,7 +174,7 @@ class UserService(
         )
         val previousKey = user.profileImageKey
 
-        revokeRefreshTokens(
+        deleteRefreshTokens(
             user = user,
         )
         user.withdraw()
@@ -204,6 +200,16 @@ class UserService(
         refreshTokenRepository.findAllByUserAndRevokedAtIsNull(
             user = user,
         ).forEach { it.revoke() }
+    }
+
+    private fun deleteRefreshTokens(
+        user: User,
+    ) {
+        refreshTokenRepository.deleteAll(
+            refreshTokenRepository.findAllByUser(
+                user = user,
+            ),
+        )
     }
 
     private fun deleteObjectQuietly(
