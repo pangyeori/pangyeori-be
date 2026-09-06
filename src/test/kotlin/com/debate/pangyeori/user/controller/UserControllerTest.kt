@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder
 
 @Import(TestObjectStorageConfig::class)
 class UserControllerTest : RestDocsMvcTest() {
+
     @Autowired
     private lateinit var userRepository: UserRepository
 
@@ -765,6 +766,8 @@ class UserControllerTest : RestDocsMvcTest() {
                 header("Set-Cookie", "refresh token 만료 쿠키")
             }
         }
+
+        userRepository.flush()
     }
 
     @Test

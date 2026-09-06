@@ -511,21 +511,26 @@ class UserServiceTest : BehaviorSpec({
 
     Given("로그인한 사용자가 회원 탈퇴를 요청할 때") {
         When("탈퇴를 진행하면") {
-            Then("status를 WITHDRAWN으로 바꾸고 식별 정보를 익명화하며 soft delete하고 refresh token을 revoke한다") {
+            Then("status를 WITHDRAWN으로 바꾸고 식별 정보를 익명화하며 soft delete하고 refresh token을 삭제한다") {
                 val user = activeUser()
                 val originalEmail = user.email
                 val originalNickname = user.nickname
-                val refreshToken = mockk<RefreshToken>(relaxed = true)
+                val refreshTokens = listOf(mockk<RefreshToken>(relaxed = true))
                 every {
                     userRepository.findByEmail(
                         email = email,
                     )
                 } returns user
                 every {
-                    refreshTokenRepository.findAllByUserAndRevokedAtIsNull(
+                    refreshTokenRepository.findAllByUser(
                         user = user,
                     )
-                } returns listOf(refreshToken)
+                } returns refreshTokens
+                every {
+                    refreshTokenRepository.deleteAll(
+                        refreshTokens,
+                    )
+                } just runs
                 every { userRepository.flush() } just runs
                 every { userRepository.delete(user) } just runs
 
@@ -537,7 +542,9 @@ class UserServiceTest : BehaviorSpec({
                 user.email shouldNotBe originalEmail
                 user.nickname shouldNotBe originalNickname
                 verify {
-                    refreshToken.revoke()
+                    refreshTokenRepository.deleteAll(
+                        refreshTokens,
+                    )
                     userRepository.delete(user)
                 }
                 verify(exactly = 0) {
@@ -550,17 +557,22 @@ class UserServiceTest : BehaviorSpec({
             Then("프로필 이미지 S3 객체도 삭제한다") {
                 val previousKey = "profile-images/2026/09/0000000000001.png"
                 val user = activeUser(currentProfileImageKey = previousKey)
-                val refreshToken = mockk<RefreshToken>(relaxed = true)
+                val refreshTokens = listOf(mockk<RefreshToken>(relaxed = true))
                 every {
                     userRepository.findByEmail(
                         email = email,
                     )
                 } returns user
                 every {
-                    refreshTokenRepository.findAllByUserAndRevokedAtIsNull(
+                    refreshTokenRepository.findAllByUser(
                         user = user,
                     )
-                } returns listOf(refreshToken)
+                } returns refreshTokens
+                every {
+                    refreshTokenRepository.deleteAll(
+                        refreshTokens,
+                    )
+                } just runs
                 every { userRepository.flush() } just runs
                 every { userRepository.delete(user) } just runs
 
