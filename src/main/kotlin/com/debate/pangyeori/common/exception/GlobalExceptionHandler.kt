@@ -3,6 +3,7 @@ package com.debate.pangyeori.common.exception
 import com.debate.pangyeori.common.dto.ApiError
 import com.debate.pangyeori.common.dto.ApiError.FieldError
 import com.debate.pangyeori.common.dto.ApiResponse
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+
+    private val logger = KotlinLogging.logger {}
 
     @ExceptionHandler(BusinessException::class)
     fun handleBusinessException(
@@ -62,6 +65,7 @@ class GlobalExceptionHandler {
     fun handleException(
         e: Exception,
     ): ResponseEntity<ApiResponse<Nothing>> {
+        logger.error(e) { "예상치 못한 예외가 발생했습니다." }
         val error = ApiError(
             code = ErrorCode.INTERNAL_SERVER_ERROR.name,
             message = ErrorCode.INTERNAL_SERVER_ERROR.message,
