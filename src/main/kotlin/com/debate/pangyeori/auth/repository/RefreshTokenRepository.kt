@@ -19,4 +19,8 @@ interface RefreshTokenRepository : JpaRepository<RefreshToken, String> {
     fun findAllByUserAndRevokedAtIsNull(
         user: User,
     ): List<RefreshToken>
+
+    fun findAllByUser(
+        user: User,
+    ): List<RefreshToken>
 }
