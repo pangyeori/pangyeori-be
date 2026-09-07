@@ -766,8 +766,6 @@ class UserControllerTest : RestDocsMvcTest() {
                 header("Set-Cookie", "refresh token 만료 쿠키")
             }
         }
-
-        userRepository.flush()
     }
 
     @Test
