@@ -8,8 +8,21 @@ enum class ErrorCode(
 ) {
     // 토론
     DEBATE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 토론입니다."),
-    DEBATE_STAGE_CONFLICT(HttpStatus.UNPROCESSABLE_ENTITY, "현재 단계에서 허용되지 않는 작업입니다."),
-    DEBATE_ALREADY_FINISHED(HttpStatus.UNPROCESSABLE_ENTITY, "이미 종료된 토론입니다."),
+    INVALID_POSITION(HttpStatus.BAD_REQUEST, "유효하지 않은 포지션입니다."),
+    INVALID_TURN_TIME(HttpStatus.BAD_REQUEST, "턴 시간은 30초 이상 600초 이하여야 합니다."),
+    INVALID_FREE_DEBATE_TIME(HttpStatus.BAD_REQUEST, "자유 토론 시간은 60초 이상 1800초 이하여야 합니다."),
+    INVITE_TOKEN_EXPIRED(HttpStatus.GONE, "초대 링크가 만료되었습니다."),
+    DEBATE_ALREADY_MATCHED(HttpStatus.CONFLICT, "이미 상대방이 매칭되었습니다."),
+    DEBATE_IN_PROGRESS(HttpStatus.CONFLICT, "이미 시작된 토론입니다."),
+    DEBATE_FINISHED(HttpStatus.CONFLICT, "이미 종료된 토론입니다."),
+    DEBATE_CANCELLED(HttpStatus.CONFLICT, "취소된 토론방입니다."),
+    SELF_JOIN_NOT_ALLOWED(HttpStatus.UNPROCESSABLE_ENTITY, "본인이 만든 토론방에는 참여할 수 없습니다."),
+    ALREADY_IN_QUEUE(HttpStatus.CONFLICT, "이미 참여 요청 대기 중입니다."),
+    ALREADY_CANCELLED(HttpStatus.CONFLICT, "이미 취소한 참여 요청입니다."),
+    ALREADY_REJECTED(HttpStatus.CONFLICT, "이미 거절된 참여 요청입니다."),
+    NOT_IN_PENDING_STATUS(HttpStatus.CONFLICT, "대기 중인 참여 요청이 아닙니다."),
+    USER_NOT_FOUND_IN_QUEUE(HttpStatus.NOT_FOUND, "대기열에서 사용자를 찾을 수 없습니다."),
+    DEBATE_NOT_WAITING(HttpStatus.CONFLICT, "참여자를 선택할 수 있는 토론방 상태가 아닙니다."),
 
     // 사용자
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
