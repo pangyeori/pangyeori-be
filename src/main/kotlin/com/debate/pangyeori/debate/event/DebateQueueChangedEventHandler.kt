@@ -13,7 +13,7 @@ class DebateQueueChangedEventHandler(
 ) {
     private val logger = KotlinLogging.logger {}
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun handle(
         event: DebateQueueChangedEvent,
     ) {
