@@ -58,6 +58,19 @@ class DebateControllerTest : RestDocsMvcTest() {
         ).accessToken
     }
 
+    private fun createDebate(
+        hostEmail: String,
+        title: String,
+        hostPosition: DebatePosition = DebatePosition.PROS,
+    ) = debateService.create(
+        hostEmail = hostEmail,
+        title = title,
+        description = null,
+        hostPosition = hostPosition,
+        turnTimeSeconds = 180,
+        freeDebateTimeSeconds = 600,
+    )
+
     @Test
     fun `토론방을 생성한다`() {
         val email = "debate-host@pangyeori.com"
@@ -233,64 +246,30 @@ class DebateControllerTest : RestDocsMvcTest() {
     }
 
     @Test
-    fun `초대 링크로 참여를 요청하고 개설자가 게스트를 선택한다`() {
+    fun `게스트가 초대 링크로 참여를 요청한다`() {
         val password = "password123!"
         val host = userRepository.save(
             User.create(
-                email = "participation-host@pangyeori.com",
+                email = "request-participation-host@pangyeori.com",
                 password = passwordEncoder.encode(password)!!,
-                nickname = "참여방장",
+                nickname = "참여요청방장",
             ),
         )
         val guest = userRepository.save(
             User.create(
-                email = "participation-guest@pangyeori.com",
+                email = "request-participation-guest@pangyeori.com",
                 password = passwordEncoder.encode(password)!!,
-                nickname = "참여게스트",
+                nickname = "참여요청게스트",
             ),
         )
-        val hostToken = authService.signIn(
-            email = host.email,
-            password = password,
-        ).accessToken
         val guestToken = authService.signIn(
             email = guest.email,
             password = password,
         ).accessToken
-        val debate = debateService.create(
+        val debate = createDebate(
             hostEmail = host.email,
-            title = "참여 기능 토론",
-            description = null,
-            hostPosition = DebatePosition.PROS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
+            title = "참여 요청 토론",
         )
-
-        restDocs(mockMvc, "debate-invitations/get") {
-            summary("초대 링크 유효성 확인")
-            tag("Debates")
-            request {
-                get("/api/v1/debate-invitations/{token}")
-                header("Authorization", "Bearer $guestToken")
-                pathParameters {
-                    param("token", debate.inviteToken, "초대 토큰")
-                }
-            }
-            response {
-                status(200)
-                body {
-                    field("success", "처리 성공 여부")
-                    obj("data", "초대 정보") {
-                        field("debateId", "토론방 ID")
-                        field("title", "토론 주제")
-                        field("guestPosition", "게스트 포지션")
-                        field("debateStatus", "토론방 상태")
-                        field("guestStatus", "요청자의 참여 상태").optional()
-                    }
-                    field("error", "오류 정보").optional()
-                }
-            }
-        }
 
         restDocs(mockMvc, "debates/request-participation") {
             summary("토론방 참여 요청")
@@ -314,6 +293,37 @@ class DebateControllerTest : RestDocsMvcTest() {
                 }
             }
         }
+    }
+
+    @Test
+    fun `개설자가 대기 중인 참여 요청 목록을 조회한다`() {
+        val password = "password123!"
+        val host = userRepository.save(
+            User.create(
+                email = "status-list-host@pangyeori.com",
+                password = passwordEncoder.encode(password)!!,
+                nickname = "상태목록방장",
+            ),
+        )
+        val guest = userRepository.save(
+            User.create(
+                email = "status-list-guest@pangyeori.com",
+                password = passwordEncoder.encode(password)!!,
+                nickname = "상태목록게스트",
+            ),
+        )
+        val hostToken = authService.signIn(
+            email = host.email,
+            password = password,
+        ).accessToken
+        val debate = createDebate(
+            hostEmail = host.email,
+            title = "참여 요청 목록 조회 토론",
+        )
+        debateParticipationService.requestParticipation(
+            debateId = debate.id,
+            userEmail = guest.email,
+        )
 
         restDocs(mockMvc, "debates/get-status") {
             summary("토론방 참여 상태 조회")
@@ -343,6 +353,37 @@ class DebateControllerTest : RestDocsMvcTest() {
                 }
             }
         }
+    }
+
+    @Test
+    fun `개설자가 대기 중인 게스트를 선택한다`() {
+        val password = "password123!"
+        val host = userRepository.save(
+            User.create(
+                email = "accept-guest-host@pangyeori.com",
+                password = passwordEncoder.encode(password)!!,
+                nickname = "게스트선택방장",
+            ),
+        )
+        val guest = userRepository.save(
+            User.create(
+                email = "accept-guest-guest@pangyeori.com",
+                password = passwordEncoder.encode(password)!!,
+                nickname = "게스트선택게스트",
+            ),
+        )
+        val hostToken = authService.signIn(
+            email = host.email,
+            password = password,
+        ).accessToken
+        val debate = createDebate(
+            hostEmail = host.email,
+            title = "게스트 선택 토론",
+        )
+        debateParticipationService.requestParticipation(
+            debateId = debate.id,
+            userEmail = guest.email,
+        )
 
         restDocs(mockMvc, "debates/accept-guest") {
             summary("게스트 선택")
@@ -383,13 +424,9 @@ class DebateControllerTest : RestDocsMvcTest() {
             email = guestEmail,
             nickname = "게스트상태게스트",
         )
-        val debate = debateService.create(
+        val debate = createDebate(
             hostEmail = hostEmail,
             title = "게스트 상태 조회 검증",
-            description = null,
-            hostPosition = DebatePosition.PROS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
         )
         debateParticipationService.requestParticipation(
             debateId = debate.id,
@@ -447,13 +484,10 @@ class DebateControllerTest : RestDocsMvcTest() {
             email = guest.email,
             password = password,
         ).accessToken
-        val debate = debateService.create(
+        val debate = createDebate(
             hostEmail = host.email,
             title = "참여 취소 토론",
-            description = null,
             hostPosition = DebatePosition.CONS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
         )
         mockMvc.perform(
             org.springframework.test.web.servlet.request.MockMvcRequestBuilders
@@ -478,51 +512,15 @@ class DebateControllerTest : RestDocsMvcTest() {
     }
 
     @Test
-    fun `만료된 초대 토큰이면 INVITE_TOKEN_EXPIRED를 반환한다`() {
-        val accessToken = issueAccessToken(
-            email = "expired-invitation@pangyeori.com",
-            nickname = "만료확인자",
-        )
-
-        restDocs(mockMvc, "debate-invitations/get-expired") {
-            summary("초대 링크 유효성 확인")
-            tag("Debates")
-            request {
-                get("/api/v1/debate-invitations/{token}")
-                header("Authorization", "Bearer $accessToken")
-                pathParameters {
-                    param("token", "expired-token", "만료되거나 존재하지 않는 초대 토큰")
-                }
-            }
-            response {
-                status(410)
-                body {
-                    field("success", "처리 성공 여부")
-                    field("data", "응답 데이터").optional()
-                    obj("error", "오류 정보") {
-                        field("code", "오류 코드")
-                        field("message", "오류 메시지")
-                        field("details", "필드별 검증 오류 목록").optional()
-                    }
-                }
-            }
-        }
-    }
-
-    @Test
     fun `개설자가 자신의 토론방에 참여 요청하면 SELF_JOIN_NOT_ALLOWED를 반환한다`() {
         val email = "self-join-host@pangyeori.com"
         val accessToken = issueAccessToken(
             email = email,
             nickname = "자기참여방장",
         )
-        val debate = debateService.create(
+        val debate = createDebate(
             hostEmail = email,
             title = "자기 참여 제한 토론",
-            description = null,
-            hostPosition = DebatePosition.PROS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
         )
 
         restDocs(mockMvc, "debates/request-participation-self") {
@@ -561,13 +559,10 @@ class DebateControllerTest : RestDocsMvcTest() {
             email = "cancel-error-guest@pangyeori.com",
             nickname = "취소오류게스트",
         )
-        val debate = debateService.create(
+        val debate = createDebate(
             hostEmail = hostEmail,
             title = "참여 취소 오류 토론",
-            description = null,
             hostPosition = DebatePosition.CONS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
         )
 
         restDocs(mockMvc, "debates/cancel-participation-not-pending") {
@@ -602,13 +597,9 @@ class DebateControllerTest : RestDocsMvcTest() {
             email = hostEmail,
             nickname = "선택오류방장",
         )
-        val debate = debateService.create(
+        val debate = createDebate(
             hostEmail = hostEmail,
             title = "게스트 선택 오류 토론",
-            description = null,
-            hostPosition = DebatePosition.PROS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
         )
 
         restDocs(mockMvc, "debates/accept-guest-not-in-queue") {
@@ -650,13 +641,9 @@ class DebateControllerTest : RestDocsMvcTest() {
             email = "status-error-stranger@pangyeori.com",
             nickname = "상태외부인",
         )
-        val debate = debateService.create(
+        val debate = createDebate(
             hostEmail = hostEmail,
             title = "상태 접근 제한 토론",
-            description = null,
-            hostPosition = DebatePosition.PROS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
         )
 
         restDocs(mockMvc, "debates/get-status-forbidden") {
@@ -685,63 +672,6 @@ class DebateControllerTest : RestDocsMvcTest() {
     }
 
     @Test
-    fun `초대 링크 조회 시 토론방 상태에 맞는 충돌 오류를 반환한다`() {
-        val guestToken = issueAccessToken(
-            email = "invitation-state-guest@pangyeori.com",
-            nickname = "초대상태게스트",
-        )
-        val states = listOf(
-            DebateStatus.READY,
-            DebateStatus.IN_PROGRESS,
-            DebateStatus.FINISHED,
-            DebateStatus.CANCELLED,
-        )
-
-        states.forEachIndexed { index, status ->
-            val hostEmail = "invitation-state-host-$index@pangyeori.com"
-            issueAccessToken(
-                email = hostEmail,
-                nickname = "초대상태방장$index",
-            )
-            val response = debateService.create(
-                hostEmail = hostEmail,
-                title = "초대 상태 검증 토론 $index",
-                description = null,
-                hostPosition = DebatePosition.PROS,
-                turnTimeSeconds = 180,
-                freeDebateTimeSeconds = 600,
-            )
-            val debate = debateRepository.findById(response.id).orElseThrow()
-            debate.status = status
-            debateRepository.saveAndFlush(debate)
-
-            restDocs(mockMvc, "debate-invitations/get-${status.code.lowercase()}") {
-                summary("초대 링크 유효성 확인")
-                tag("Debates")
-                request {
-                    get("/api/v1/debate-invitations/{token}")
-                    header("Authorization", "Bearer $guestToken")
-                    pathParameters {
-                        param("token", response.inviteToken, "초대 토큰")
-                    }
-                }
-                response {
-                    status(409)
-                    body {
-                        field("success", "처리 성공 여부")
-                        field("data", "응답 데이터").optional()
-                        obj("error", "오류 정보") {
-                            field("code", "오류 코드")
-                            field("message", "오류 메시지")
-                            field("details", "필드별 검증 오류 목록").optional()
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    @Test
     fun `참여 요청 시 토론방 상태에 맞는 충돌 오류를 반환한다`() {
         val guestToken = issueAccessToken(
             email = "request-state-guest@pangyeori.com",
@@ -760,13 +690,10 @@ class DebateControllerTest : RestDocsMvcTest() {
                 email = hostEmail,
                 nickname = "요청상태방장$index",
             )
-            val response = debateService.create(
+            val response = createDebate(
                 hostEmail = hostEmail,
                 title = "요청 상태 검증 토론 $index",
-                description = null,
                 hostPosition = DebatePosition.CONS,
-                turnTimeSeconds = 180,
-                freeDebateTimeSeconds = 600,
             )
             val debate = debateRepository.findById(response.id).orElseThrow()
             debate.status = status
@@ -809,13 +736,9 @@ class DebateControllerTest : RestDocsMvcTest() {
             email = "accept-forbidden-guest@pangyeori.com",
             nickname = "권한검증게스트",
         )
-        val debate = debateService.create(
+        val debate = createDebate(
             hostEmail = hostEmail,
             title = "게스트 선택 권한 검증",
-            description = null,
-            hostPosition = DebatePosition.PROS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
         )
 
         restDocs(mockMvc, "debates/accept-guest-forbidden") {
@@ -853,13 +776,10 @@ class DebateControllerTest : RestDocsMvcTest() {
             email = hostEmail,
             nickname = "선택상태방장",
         )
-        val response = debateService.create(
+        val response = createDebate(
             hostEmail = hostEmail,
             title = "게스트 선택 상태 검증",
-            description = null,
             hostPosition = DebatePosition.CONS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
         )
         val debate = debateRepository.findById(response.id).orElseThrow()
         debate.status = DebateStatus.READY
@@ -894,39 +814,34 @@ class DebateControllerTest : RestDocsMvcTest() {
     }
 
     @Test
-    fun `중복 요청과 취소 후 재요청을 제한한다`() {
+    fun `이미 대기 중인 게스트가 다시 참여 요청하면 409를 반환한다`() {
         val password = "password123!"
         val host = userRepository.save(
             User.create(
-                email = "repeat-request-host@pangyeori.com",
+                email = "already-pending-host@pangyeori.com",
                 password = passwordEncoder.encode(password)!!,
-                nickname = "재요청방장",
+                nickname = "중복요청방장",
             ),
         )
         val guest = userRepository.save(
             User.create(
-                email = "repeat-request-guest@pangyeori.com",
+                email = "already-pending-guest@pangyeori.com",
                 password = passwordEncoder.encode(password)!!,
-                nickname = "재요청게스트",
+                nickname = "중복요청게스트",
             ),
         )
         val guestToken = authService.signIn(
             email = guest.email,
             password = password,
         ).accessToken
-        val debate = debateService.create(
+        val debate = createDebate(
             hostEmail = host.email,
             title = "중복 참여 요청 검증",
-            description = null,
-            hostPosition = DebatePosition.PROS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
         )
-        mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                .post("/api/v1/debates/${debate.id}/invitations/request")
-                .header("Authorization", "Bearer $guestToken"),
-        ).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isCreated)
+        debateParticipationService.requestParticipation(
+            debateId = debate.id,
+            userEmail = guest.email,
+        )
 
         restDocs(mockMvc, "debates/request-participation-already-pending") {
             summary("토론방 참여 요청")
@@ -951,12 +866,41 @@ class DebateControllerTest : RestDocsMvcTest() {
                 }
             }
         }
+    }
 
-        mockMvc.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                .delete("/api/v1/debates/${debate.id}/invitations/request")
-                .header("Authorization", "Bearer $guestToken"),
-        ).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNoContent)
+    @Test
+    fun `참여 요청을 취소한 게스트가 다시 요청하면 409를 반환한다`() {
+        val password = "password123!"
+        val host = userRepository.save(
+            User.create(
+                email = "already-cancelled-host@pangyeori.com",
+                password = passwordEncoder.encode(password)!!,
+                nickname = "취소재요청방장",
+            ),
+        )
+        val guest = userRepository.save(
+            User.create(
+                email = "already-cancelled-guest@pangyeori.com",
+                password = passwordEncoder.encode(password)!!,
+                nickname = "취소재요청게스트",
+            ),
+        )
+        val guestToken = authService.signIn(
+            email = guest.email,
+            password = password,
+        ).accessToken
+        val debate = createDebate(
+            hostEmail = host.email,
+            title = "취소 후 재요청 검증",
+        )
+        debateParticipationService.requestParticipation(
+            debateId = debate.id,
+            userEmail = guest.email,
+        )
+        debateParticipationService.cancelParticipation(
+            debateId = debate.id,
+            userEmail = guest.email,
+        )
 
         restDocs(mockMvc, "debates/request-participation-already-cancelled") {
             summary("토론방 참여 요청")
@@ -1011,13 +955,10 @@ class DebateControllerTest : RestDocsMvcTest() {
             email = rejectedGuest.email,
             password = password,
         ).accessToken
-        val debate = debateService.create(
+        val debate = createDebate(
             hostEmail = host.email,
             title = "거절 후 재요청 검증",
-            description = null,
             hostPosition = DebatePosition.CONS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
         )
         debateParticipationService.requestParticipation(
             debateId = debate.id,
@@ -1069,13 +1010,9 @@ class DebateControllerTest : RestDocsMvcTest() {
             email = "expired-request-guest@pangyeori.com",
             nickname = "만료요청게스트",
         )
-        val debate = debateService.create(
+        val debate = createDebate(
             hostEmail = hostEmail,
             title = "만료 참여 요청 검증",
-            description = null,
-            hostPosition = DebatePosition.PROS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
         )
         entityAuditIntegrationTestSupport.backdateCreatedAt(
             entityClass = Debate::class,
@@ -1115,13 +1052,10 @@ class DebateControllerTest : RestDocsMvcTest() {
             email = hostEmail,
             nickname = "선택검증방장",
         )
-        val debate = debateService.create(
+        val debate = createDebate(
             hostEmail = hostEmail,
             title = "게스트 선택 입력값 검증",
-            description = null,
             hostPosition = DebatePosition.CONS,
-            turnTimeSeconds = 180,
-            freeDebateTimeSeconds = 600,
         )
 
         restDocs(mockMvc, "debates/accept-guest-invalid-user-id") {
