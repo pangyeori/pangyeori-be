@@ -1,4 +1,4 @@
-package com.debate.pangyeori.support.dsl
+package com.debate.pangyeori.support.restdocs.dsl
 
 import com.epages.restdocs.apispec.ResourceDocumentation
 import com.epages.restdocs.apispec.ResourceSnippetParameters

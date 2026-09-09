@@ -1,4 +1,4 @@
-package com.debate.pangyeori.support.dsl
+package com.debate.pangyeori.support.restdocs.dsl
 
 import org.springframework.restdocs.cookies.CookieDescriptor
 import org.springframework.restdocs.cookies.CookieDocumentation.cookieWithName

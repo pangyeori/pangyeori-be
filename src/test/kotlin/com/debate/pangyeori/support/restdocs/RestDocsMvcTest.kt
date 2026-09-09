@@ -1,4 +1,4 @@
-package com.debate.pangyeori.support
+package com.debate.pangyeori.support.restdocs
 
 import com.debate.pangyeori.support.containers.TestContainersInitializer
 import jakarta.persistence.EntityManager

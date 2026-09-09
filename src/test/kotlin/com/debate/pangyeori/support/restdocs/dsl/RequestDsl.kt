@@ -1,4 +1,4 @@
-package com.debate.pangyeori.support.dsl
+package com.debate.pangyeori.support.restdocs.dsl
 
 import jakarta.servlet.http.Cookie
 import org.springframework.http.HttpMethod

@@ -6,8 +6,8 @@ import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.service.DebateParticipationService
 import com.debate.pangyeori.debate.service.DebateService
-import com.debate.pangyeori.support.RestDocsMvcTest
-import com.debate.pangyeori.support.dsl.restDocs
+import com.debate.pangyeori.support.restdocs.RestDocsMvcTest
+import com.debate.pangyeori.support.restdocs.dsl.restDocs
 import com.debate.pangyeori.support.fixture.EntityAuditIntegrationTestSupport
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.repository.UserRepository

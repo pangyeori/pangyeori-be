@@ -1,4 +1,4 @@
-package com.debate.pangyeori.support.dsl
+package com.debate.pangyeori.support.restdocs.dsl
 
 import org.springframework.restdocs.operation.preprocess.OperationPreprocessor
 import org.springframework.restdocs.operation.preprocess.Preprocessors.replacePattern

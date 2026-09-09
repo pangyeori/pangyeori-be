@@ -3,8 +3,8 @@ package com.debate.pangyeori.storage.controller
 import com.debate.pangyeori.auth.service.AuthService
 import com.debate.pangyeori.storage.client.TestObjectStorageConfig
 import com.debate.pangyeori.storage.policy.StorageCategory
-import com.debate.pangyeori.support.RestDocsMvcTest
-import com.debate.pangyeori.support.dsl.restDocs
+import com.debate.pangyeori.support.restdocs.RestDocsMvcTest
+import com.debate.pangyeori.support.restdocs.dsl.restDocs
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.repository.UserRepository
 import org.junit.jupiter.api.Test
