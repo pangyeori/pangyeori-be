@@ -8,9 +8,6 @@ enum class ErrorCode(
 ) {
     // 토론
     DEBATE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 토론입니다."),
-    INVALID_POSITION(HttpStatus.BAD_REQUEST, "유효하지 않은 포지션입니다."),
-    INVALID_TURN_TIME(HttpStatus.BAD_REQUEST, "턴 시간은 30초 이상 600초 이하여야 합니다."),
-    INVALID_FREE_DEBATE_TIME(HttpStatus.BAD_REQUEST, "자유 토론 시간은 60초 이상 1800초 이하여야 합니다."),
     INVITE_TOKEN_EXPIRED(HttpStatus.GONE, "초대 링크가 만료되었습니다."),
     DEBATE_ALREADY_MATCHED(HttpStatus.CONFLICT, "이미 상대방이 매칭되었습니다."),
     DEBATE_IN_PROGRESS(HttpStatus.CONFLICT, "이미 시작된 토론입니다."),

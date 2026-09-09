@@ -12,4 +12,10 @@ enum class DebatePosition(
         PROS -> CONS
         CONS -> PROS
     }
+
+    companion object {
+        fun fromCode(
+            code: String,
+        ) = entries.first { it.code == code }
+    }
 }
