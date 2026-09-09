@@ -23,6 +23,7 @@ enum class ErrorCode(
     NOT_IN_PENDING_STATUS(HttpStatus.CONFLICT, "대기 중인 참여 요청이 아닙니다."),
     USER_NOT_FOUND_IN_QUEUE(HttpStatus.NOT_FOUND, "대기열에서 사용자를 찾을 수 없습니다."),
     DEBATE_NOT_WAITING(HttpStatus.CONFLICT, "참여자를 선택할 수 있는 토론방 상태가 아닙니다."),
+    DEBATE_STREAM_TICKET_INVALID(HttpStatus.UNAUTHORIZED, "유효하지 않거나 만료된 스트림 티켓입니다."),
 
     // 사용자
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
