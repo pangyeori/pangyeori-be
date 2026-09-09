@@ -1,5 +1,6 @@
-package com.debate.pangyeori.debate.event
+package com.debate.pangyeori.debate.event.handler
 
+import com.debate.pangyeori.debate.event.DebateCreatedEvent
 import com.debate.pangyeori.debate.repository.DebateInviteRedisRepository
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.repository.DebateStatusRedisRepository

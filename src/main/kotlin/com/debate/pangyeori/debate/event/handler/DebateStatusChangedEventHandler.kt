@@ -1,5 +1,6 @@
-package com.debate.pangyeori.debate.event
+package com.debate.pangyeori.debate.event.handler
 
+import com.debate.pangyeori.debate.event.DebateStatusChangedEvent
 import com.debate.pangyeori.debate.repository.DebateStatusRedisRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component

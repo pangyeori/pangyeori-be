@@ -1,6 +1,9 @@
-package com.debate.pangyeori.debate.event
+package com.debate.pangyeori.debate.event.handler
 
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
+import com.debate.pangyeori.debate.event.DebateGuestStatusChangedEvent
+import com.debate.pangyeori.debate.event.DebateQueueChangedEvent
+import com.debate.pangyeori.debate.event.DebateStatusChangedEvent
 import com.debate.pangyeori.debate.service.DebateParticipationService
 import com.debate.pangyeori.debate.stream.message.*
 import com.debate.pangyeori.debate.stream.publisher.DebateStreamPublisher

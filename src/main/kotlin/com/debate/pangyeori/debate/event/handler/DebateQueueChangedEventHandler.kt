@@ -1,5 +1,6 @@
-package com.debate.pangyeori.debate.event
+package com.debate.pangyeori.debate.event.handler
 
+import com.debate.pangyeori.debate.event.DebateQueueChangedEvent
 import com.debate.pangyeori.debate.event.DebateQueueChangedEvent.DebateQueueOperation
 import com.debate.pangyeori.debate.repository.DebateQueueRedisRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
