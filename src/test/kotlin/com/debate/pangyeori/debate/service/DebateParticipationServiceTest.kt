@@ -3,6 +3,7 @@ package com.debate.pangyeori.debate.service
 import com.debate.pangyeori.debate.domain.Debate
 import com.debate.pangyeori.debate.domain.DebateUser
 import com.debate.pangyeori.debate.domain.enums.*
+import com.debate.pangyeori.debate.event.DebateGuestStatusChangedEvent
 import com.debate.pangyeori.debate.event.DebateQueueChangedEvent
 import com.debate.pangyeori.debate.event.DebateStatusChangedEvent
 import com.debate.pangyeori.debate.exception.AlreadyInQueueException
@@ -127,6 +128,7 @@ class DebateParticipationServiceTest : BehaviorSpec({
                 } returns listOf(selectedMember)
                 every { eventPublisher.publishEvent(any<DebateQueueChangedEvent>()) } just runs
                 every { eventPublisher.publishEvent(any<DebateStatusChangedEvent>()) } just runs
+                every { eventPublisher.publishEvent(any<DebateGuestStatusChangedEvent>()) } just runs
 
                 val response = service.acceptGuest(
                     debateId = debate.id!!,
