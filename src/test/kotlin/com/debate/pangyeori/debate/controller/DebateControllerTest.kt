@@ -2,13 +2,14 @@ package com.debate.pangyeori.debate.controller
 
 import com.debate.pangyeori.auth.service.AuthService
 import com.debate.pangyeori.debate.domain.Debate
+import com.debate.pangyeori.debate.domain.enums.DebatePosition
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.service.DebateParticipationService
 import com.debate.pangyeori.debate.service.DebateService
+import com.debate.pangyeori.support.fixture.EntityAuditIntegrationTestSupport
 import com.debate.pangyeori.support.restdocs.RestDocsMvcTest
 import com.debate.pangyeori.support.restdocs.dsl.restDocs
-import com.debate.pangyeori.support.fixture.EntityAuditIntegrationTestSupport
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.repository.UserRepository
 import org.junit.jupiter.api.Test
@@ -109,7 +110,7 @@ class DebateControllerTest : RestDocsMvcTest() {
     }
 
     @Test
-    fun `턴 시간이 허용 범위를 벗어나면 INVALID_TURN_TIME을 반환한다`() {
+    fun `턴 시간이 허용 범위를 벗어나면 400을 반환한다`() {
         val email = "invalid-debate-host@pangyeori.com"
         val password = "password123!"
         userRepository.save(
@@ -145,7 +146,10 @@ class DebateControllerTest : RestDocsMvcTest() {
                     obj("error", "오류 정보") {
                         field("code", "오류 코드")
                         field("message", "오류 메시지")
-                        field("details", "필드별 검증 오류 목록").optional()
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드명")
+                            field("message", "필드 오류 메시지")
+                        }
                     }
                 }
             }
@@ -153,7 +157,7 @@ class DebateControllerTest : RestDocsMvcTest() {
     }
 
     @Test
-    fun `자유 토론 시간이 허용 범위를 벗어나면 INVALID_FREE_DEBATE_TIME을 반환한다`() {
+    fun `자유 토론 시간이 허용 범위를 벗어나면 400을 반환한다`() {
         val accessToken = issueAccessToken(
             email = "invalid-free-time-host@pangyeori.com",
             nickname = "자유시간방장",
@@ -180,7 +184,10 @@ class DebateControllerTest : RestDocsMvcTest() {
                     obj("error", "오류 정보") {
                         field("code", "오류 코드")
                         field("message", "오류 메시지")
-                        field("details", "필드별 검증 오류 목록").optional()
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드명")
+                            field("message", "필드 오류 메시지")
+                        }
                     }
                 }
             }
@@ -188,7 +195,7 @@ class DebateControllerTest : RestDocsMvcTest() {
     }
 
     @Test
-    fun `포지션이 유효하지 않으면 INVALID_POSITION을 반환한다`() {
+    fun `포지션이 유효하지 않으면 400을 반환한다`() {
         val accessToken = issueAccessToken(
             email = "invalid-position-host@pangyeori.com",
             nickname = "포지션방장",
@@ -215,7 +222,10 @@ class DebateControllerTest : RestDocsMvcTest() {
                     obj("error", "오류 정보") {
                         field("code", "오류 코드")
                         field("message", "오류 메시지")
-                        field("details", "필드별 검증 오류 목록").optional()
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드명")
+                            field("message", "필드 오류 메시지")
+                        }
                     }
                 }
             }
@@ -251,7 +261,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = host.email,
             title = "참여 기능 토론",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -377,7 +387,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "게스트 상태 조회 검증",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -441,7 +451,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = host.email,
             title = "참여 취소 토론",
             description = null,
-            hostPosition = "CONS",
+            hostPosition = DebatePosition.CONS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -510,7 +520,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = email,
             title = "자기 참여 제한 토론",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -555,7 +565,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "참여 취소 오류 토론",
             description = null,
-            hostPosition = "CONS",
+            hostPosition = DebatePosition.CONS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -596,7 +606,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "게스트 선택 오류 토론",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -644,7 +654,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "상태 접근 제한 토론",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -697,7 +707,7 @@ class DebateControllerTest : RestDocsMvcTest() {
                 hostEmail = hostEmail,
                 title = "초대 상태 검증 토론 $index",
                 description = null,
-                hostPosition = "PROS",
+                hostPosition = DebatePosition.PROS,
                 turnTimeSeconds = 180,
                 freeDebateTimeSeconds = 600,
             )
@@ -754,7 +764,7 @@ class DebateControllerTest : RestDocsMvcTest() {
                 hostEmail = hostEmail,
                 title = "요청 상태 검증 토론 $index",
                 description = null,
-                hostPosition = "CONS",
+                hostPosition = DebatePosition.CONS,
                 turnTimeSeconds = 180,
                 freeDebateTimeSeconds = 600,
             )
@@ -803,7 +813,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "게스트 선택 권한 검증",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -847,7 +857,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "게스트 선택 상태 검증",
             description = null,
-            hostPosition = "CONS",
+            hostPosition = DebatePosition.CONS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -908,7 +918,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = host.email,
             title = "중복 참여 요청 검증",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -1005,7 +1015,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = host.email,
             title = "거절 후 재요청 검증",
             description = null,
-            hostPosition = "CONS",
+            hostPosition = DebatePosition.CONS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -1063,7 +1073,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "만료 참여 요청 검증",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -1109,7 +1119,7 @@ class DebateControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "게스트 선택 입력값 검증",
             description = null,
-            hostPosition = "CONS",
+            hostPosition = DebatePosition.CONS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )

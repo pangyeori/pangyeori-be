@@ -1,5 +1,6 @@
 package com.debate.pangyeori.debate.controller
 
+import com.debate.pangyeori.debate.domain.enums.DebatePosition
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.domain.enums.DebateUserStatus
 import com.debate.pangyeori.debate.dto.response.DebateStatusResponse
@@ -284,7 +285,7 @@ class DebateStreamControllerSseTest : AsyncApiDocsTest() {
         hostEmail = hostEmail,
         title = title,
         description = null,
-        hostPosition = "PROS",
+        hostPosition = DebatePosition.PROS,
         turnTimeSeconds = 180,
         freeDebateTimeSeconds = 600,
     )

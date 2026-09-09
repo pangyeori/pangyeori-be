@@ -1,6 +1,7 @@
 package com.debate.pangyeori.debate.controller
 
 import com.debate.pangyeori.auth.service.AuthService
+import com.debate.pangyeori.debate.domain.enums.DebatePosition
 import com.debate.pangyeori.debate.service.DebateParticipationService
 import com.debate.pangyeori.debate.service.DebateService
 import com.debate.pangyeori.debate.service.DebateStreamService
@@ -81,7 +82,7 @@ class DebateStreamControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "스트림 티켓 토론",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -129,7 +130,7 @@ class DebateStreamControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "스트림 티켓 접근 제한 토론",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -172,7 +173,7 @@ class DebateStreamControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "정상 스트림 토론",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -238,7 +239,7 @@ class DebateStreamControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "게스트 관점 스트림 토론",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -305,7 +306,7 @@ class DebateStreamControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "무티켓 스트림 토론",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -345,7 +346,7 @@ class DebateStreamControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "잘못된 티켓 스트림 토론",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -388,7 +389,7 @@ class DebateStreamControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "티켓 발급 토론",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
@@ -396,7 +397,7 @@ class DebateStreamControllerTest : RestDocsMvcTest() {
             hostEmail = hostEmail,
             title = "티켓 대상 토론",
             description = null,
-            hostPosition = "PROS",
+            hostPosition = DebatePosition.PROS,
             turnTimeSeconds = 180,
             freeDebateTimeSeconds = 600,
         )
