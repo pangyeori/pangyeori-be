@@ -1,5 +1,6 @@
 package com.debate.pangyeori.debate.service
 
+import com.debate.pangyeori.common.exception.StorageUnavailableException
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 import com.debate.pangyeori.debate.domain.enums.DebateUserStatus
@@ -23,6 +24,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import org.springframework.data.redis.RedisConnectionFailureException
 
 class DebateStreamServiceTest : BehaviorSpec({
     val userRepository = mockk<UserRepository>()
@@ -116,6 +118,32 @@ class DebateStreamServiceTest : BehaviorSpec({
                 every { userRepository.findByEmail(email = user.email) } returns null
 
                 shouldThrow<UserNotFoundException> {
+                    service.issueTicket(
+                        debateId = debateId,
+                        userEmail = user.email,
+                    )
+                }
+            }
+        }
+
+        When("Redis 티켓 저장소 접근이 실패하면") {
+            Then("StorageUnavailableException을 던진다") {
+                every { userRepository.findByEmail(email = user.email) } returns user
+                every {
+                    debateParticipationService.getMemberRole(
+                        debateId = debateId,
+                        userId = user.id!!,
+                    )
+                } returns DebateUserRole.GUEST
+                every {
+                    debateSseTicketRedisRepository.save(
+                        ticket = any(),
+                        debateId = debateId,
+                        userId = user.id!!,
+                    )
+                } throws RedisConnectionFailureException("redis down")
+
+                shouldThrow<StorageUnavailableException> {
                     service.issueTicket(
                         debateId = debateId,
                         userEmail = user.email,
@@ -238,6 +266,24 @@ class DebateStreamServiceTest : BehaviorSpec({
                         debateId = debateId,
                         ticket = "mismatch",
                     )
+                }
+            }
+        }
+
+        When("Redis 티켓 저장소 접근이 실패하면") {
+            Then("StorageUnavailableException을 던지고 구독하지 않는다") {
+                every {
+                    debateSseTicketRedisRepository.consume(ticket = "storage-down")
+                } throws RedisConnectionFailureException("redis down")
+
+                shouldThrow<StorageUnavailableException> {
+                    service.subscribe(
+                        debateId = debateId,
+                        ticket = "storage-down",
+                    )
+                }
+                verify(exactly = 0) {
+                    debateSseRegistry.register(any(), any(), any(), any())
                 }
             }
         }
