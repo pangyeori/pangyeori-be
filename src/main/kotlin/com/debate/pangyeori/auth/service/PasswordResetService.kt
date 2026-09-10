@@ -5,6 +5,7 @@ import com.debate.pangyeori.auth.exception.PasswordResetTokenNotFoundException
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.auth.repository.PasswordResetRedisRepository
 import com.debate.pangyeori.auth.repository.RefreshTokenRepository
+import com.debate.pangyeori.common.util.mapStorageFailure
 import com.debate.pangyeori.common.util.maskEmail
 import com.debate.pangyeori.user.exception.EmailNotVerifiedException
 import com.debate.pangyeori.user.exception.UserNotFoundException
@@ -33,10 +34,12 @@ class PasswordResetService(
     ): PasswordResetResponse {
         val normalizedEmail = email.trim().lowercase()
 
-        if (!emailVerificationRedisRepository.isVerified(
+        val verified = mapStorageFailure(logger, "이메일 인증") {
+            emailVerificationRedisRepository.isVerified(
                 email = normalizedEmail,
             )
-        ) {
+        }
+        if (!verified) {
             throw EmailNotVerifiedException()
         }
         if (!userRepository.existsByEmail(
@@ -47,13 +50,15 @@ class PasswordResetService(
         }
 
         val token = generateToken()
-        passwordResetRedisRepository.saveToken(
-            email = normalizedEmail,
-            token = token,
-        )
-        emailVerificationRedisRepository.clearVerified(
-            email = normalizedEmail,
-        )
+        mapStorageFailure(logger, "비밀번호 재설정 토큰") {
+            passwordResetRedisRepository.saveToken(
+                email = normalizedEmail,
+                token = token,
+            )
+            emailVerificationRedisRepository.clearVerified(
+                email = normalizedEmail,
+            )
+        }
         logger.info { "비밀번호 재설정 토큰 발급 완료. email=${normalizedEmail.maskEmail()}" }
 
         return PasswordResetResponse(
@@ -66,9 +71,11 @@ class PasswordResetService(
         passwordResetToken: String,
         newPassword: String,
     ) {
-        val email = passwordResetRedisRepository.findEmailByToken(
-            token = passwordResetToken,
-        ) ?: throw PasswordResetTokenNotFoundException()
+        val email = mapStorageFailure(logger, "비밀번호 재설정 토큰") {
+            passwordResetRedisRepository.findEmailByToken(
+                token = passwordResetToken,
+            )
+        } ?: throw PasswordResetTokenNotFoundException()
 
         val user = userRepository.findByEmail(
             email = email,
@@ -82,9 +89,11 @@ class PasswordResetService(
             user = user,
         ).forEach { it.revoke() }
 
-        passwordResetRedisRepository.deleteToken(
-            token = passwordResetToken,
-        )
+        mapStorageFailure(logger, "비밀번호 재설정 토큰") {
+            passwordResetRedisRepository.deleteToken(
+                token = passwordResetToken,
+            )
+        }
         logger.info { "비밀번호 재설정 완료. userId=${user.id}" }
     }
 

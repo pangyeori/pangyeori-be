@@ -1,5 +1,6 @@
 package com.debate.pangyeori.debate.service
 
+import com.debate.pangyeori.common.util.mapStorageFailure
 import com.debate.pangyeori.debate.dto.response.DebateStreamTicketResponse
 import com.debate.pangyeori.debate.exception.DebateStreamTicketInvalidException
 import com.debate.pangyeori.debate.repository.DebateSseTicketRedisRepository
@@ -38,11 +39,13 @@ class DebateStreamService(
         )
 
         val ticket = generateTicket()
-        debateSseTicketRedisRepository.save(
-            ticket = ticket,
-            debateId = debateId,
-            userId = userId,
-        )
+        mapStorageFailure(logger, "스트림 티켓") {
+            debateSseTicketRedisRepository.save(
+                ticket = ticket,
+                debateId = debateId,
+                userId = userId,
+            )
+        }
         logger.info { "토론 상태 스트림 티켓을 발급했습니다. debateId=$debateId, userId=$userId" }
 
         return DebateStreamTicketResponse(
@@ -55,7 +58,7 @@ class DebateStreamService(
         debateId: String,
         ticket: String,
     ): SseEmitter {
-        val ticketPayload = debateSseTicketRedisRepository.consume(
+        val ticketPayload = consumeTicket(
             ticket = ticket,
         ) ?: throw DebateStreamTicketInvalidException()
         if (ticketPayload.debateId != debateId) {
@@ -102,6 +105,15 @@ class DebateStreamService(
 
         return emitter
     }
+
+    private fun consumeTicket(
+        ticket: String,
+    ): DebateSseTicketRedisRepository.TicketPayload? =
+        mapStorageFailure(logger, "스트림 티켓") {
+            debateSseTicketRedisRepository.consume(
+                ticket = ticket,
+            )
+        }
 
     private fun generateTicket(): String {
         val bytes = ByteArray(TICKET_BYTE_LENGTH)

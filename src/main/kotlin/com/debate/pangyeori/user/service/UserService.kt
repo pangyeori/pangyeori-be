@@ -2,6 +2,7 @@ package com.debate.pangyeori.user.service
 
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.auth.repository.RefreshTokenRepository
+import com.debate.pangyeori.common.util.mapStorageFailure
 import com.debate.pangyeori.storage.client.ObjectStorage
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.dto.response.NicknameDuplicateResponse
@@ -34,10 +35,12 @@ class UserService(
         val normalizedEmail = email.trim().lowercase()
         val normalizedNickname = nickname.trim()
 
-        if (!emailVerificationRedisRepository.isVerified(
+        val verified = mapStorageFailure(logger, "이메일 인증") {
+            emailVerificationRedisRepository.isVerified(
                 email = normalizedEmail,
             )
-        ) {
+        }
+        if (!verified) {
             throw EmailNotVerifiedException()
         }
         if (userRepository.existsByEmail(
@@ -59,9 +62,11 @@ class UserService(
             nickname = normalizedNickname,
         )
         userRepository.save(user)
-        emailVerificationRedisRepository.clearVerified(
-            email = normalizedEmail,
-        )
+        mapStorageFailure(logger, "이메일 인증") {
+            emailVerificationRedisRepository.clearVerified(
+                email = normalizedEmail,
+            )
+        }
     }
 
     @Transactional(readOnly = true)
