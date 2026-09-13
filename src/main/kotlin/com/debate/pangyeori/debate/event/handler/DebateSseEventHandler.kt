@@ -1,5 +1,6 @@
 package com.debate.pangyeori.debate.event.handler
 
+import com.debate.pangyeori.config.AsyncConfig
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.event.DebateGuestStatusChangedEvent
 import com.debate.pangyeori.debate.event.DebateQueueChangedEvent
@@ -8,6 +9,7 @@ import com.debate.pangyeori.debate.service.DebateParticipationService
 import com.debate.pangyeori.debate.stream.message.*
 import com.debate.pangyeori.debate.stream.publisher.DebateStreamPublisher
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
@@ -19,6 +21,7 @@ class DebateSseEventHandler(
 ) {
     private val logger = KotlinLogging.logger {}
 
+    @Async(AsyncConfig.DEBATE_SSE_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun handleStatusChanged(
         event: DebateStatusChangedEvent,
@@ -40,6 +43,7 @@ class DebateSseEventHandler(
         }
     }
 
+    @Async(AsyncConfig.DEBATE_SSE_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun handleQueueChanged(
         event: DebateQueueChangedEvent,
@@ -62,6 +66,7 @@ class DebateSseEventHandler(
         }
     }
 
+    @Async(AsyncConfig.DEBATE_SSE_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun handleGuestStatusChanged(
         event: DebateGuestStatusChangedEvent,
