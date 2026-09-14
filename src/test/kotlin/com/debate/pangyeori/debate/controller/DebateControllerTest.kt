@@ -345,6 +345,7 @@ class DebateControllerTest : RestDocsMvcTest() {
                         array("requestList", "대기 중인 참여 요청 (호스트만 조회 가능)") {
                             field("userId", "사용자 ID")
                             field("nickname", "사용자 닉네임")
+                            field("profileImageKey", "사용자 프로필 이미지 키").optional()
                             field("status", "참여 상태")
                             field("requestedAt", "참여 요청 시각")
                         }.optional()
@@ -453,6 +454,7 @@ class DebateControllerTest : RestDocsMvcTest() {
                         array("requestList", "대기 중인 참여 요청 (호스트만 조회 가능)") {
                             field("userId", "사용자 ID")
                             field("nickname", "사용자 닉네임")
+                            field("profileImageKey", "사용자 프로필 이미지 키").optional()
                             field("status", "참여 상태")
                             field("requestedAt", "참여 요청 시각")
                         }.optional()
