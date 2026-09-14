@@ -69,6 +69,7 @@ class DebateStreamControllerSseTest : AsyncApiDocsTest() {
                 path = "/api/v1/debates/{debateId}/status/stream",
                 protocol = "https",
                 description = "토론 참여 상태 실시간 스트림. 발급받은 일회성 티켓을 쿼리 파라미터로 넘겨 인증한다",
+                name = "debateStatusStream",
             )
             parameter("debateId", "토론방 ID")
             connect {
@@ -153,6 +154,7 @@ class DebateStreamControllerSseTest : AsyncApiDocsTest() {
                 path = "/api/v1/debates/{debateId}/status/stream",
                 protocol = "https",
                 description = "토론 참여 상태 실시간 스트림. 발급받은 일회성 티켓을 쿼리 파라미터로 넘겨 인증한다",
+                name = "debateStatusStream",
             )
             parameter("debateId", "토론방 ID")
             connect {
@@ -240,6 +242,7 @@ class DebateStreamControllerSseTest : AsyncApiDocsTest() {
                 path = "/api/v1/debates/{debateId}/status/stream",
                 protocol = "https",
                 description = "토론 참여 상태 실시간 스트림. 발급받은 일회성 티켓을 쿼리 파라미터로 넘겨 인증한다",
+                name = "debateStatusStream",
             )
             parameter("debateId", "토론방 ID")
             connect {
