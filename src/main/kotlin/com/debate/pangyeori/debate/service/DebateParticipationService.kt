@@ -285,6 +285,7 @@ class DebateParticipationService(
             DebateStatusResponse.ParticipationRequest(
                 userId = it.user.id!!,
                 nickname = it.user.nickname,
+                profileImageKey = it.user.profileImageKey,
                 status = it.status,
                 requestedAt = it.createdAt!!,
             )
