@@ -2,21 +2,23 @@ package com.debate.pangyeori.debate.service
 
 import com.debate.pangyeori.debate.domain.Debate
 import com.debate.pangyeori.debate.domain.DebateUser
-import com.debate.pangyeori.debate.domain.enums.*
-import com.debate.pangyeori.debate.dto.response.*
+import com.debate.pangyeori.debate.domain.enums.DebateStatus
+import com.debate.pangyeori.debate.domain.enums.DebateUserRole
+import com.debate.pangyeori.debate.domain.enums.DebateUserStatus
+import com.debate.pangyeori.debate.dto.response.DebateGuestAcceptResponse
+import com.debate.pangyeori.debate.dto.response.DebateInvitationResponse
+import com.debate.pangyeori.debate.dto.response.DebateParticipationResponse
+import com.debate.pangyeori.debate.dto.response.DebateStatusResponse
+import com.debate.pangyeori.debate.event.DebateGuestStatusChangedEvent
 import com.debate.pangyeori.debate.event.DebateQueueChangedEvent
 import com.debate.pangyeori.debate.event.DebateQueueChangedEvent.DebateQueueOperation
 import com.debate.pangyeori.debate.event.DebateStatusChangedEvent
 import com.debate.pangyeori.debate.exception.*
-import com.debate.pangyeori.debate.repository.DebateInviteRedisRepository
-import com.debate.pangyeori.debate.repository.DebateRepository
-import com.debate.pangyeori.debate.repository.DebateQueueRedisRepository
-import com.debate.pangyeori.debate.repository.DebateUserRepository
-import com.debate.pangyeori.debate.repository.DebateStatusRedisRepository
+import com.debate.pangyeori.debate.repository.*
 import com.debate.pangyeori.user.exception.UserNotFoundException
 import com.debate.pangyeori.user.repository.UserRepository
-import org.springframework.context.ApplicationEventPublisher
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -169,10 +171,20 @@ class DebateParticipationService(
         }
 
         selectedMember.accept()
+        publishGuestStatusChange(
+            debateId = debateId,
+            member = selectedMember,
+        )
         debateUserRepository.findAllByDebateIdAndStatus(
             debateId = debateId,
             status = DebateUserStatus.PENDING,
-        ).filter { it.id != selectedMember.id }.forEach { it.reject() }
+        ).filter { it.id != selectedMember.id }.forEach { rejectedMember ->
+            rejectedMember.reject()
+            publishGuestStatusChange(
+                debateId = debateId,
+                member = rejectedMember,
+            )
+        }
         debate.acceptGuest(
             selectedGuest = selectedMember.user,
         )
@@ -206,46 +218,98 @@ class DebateParticipationService(
             debateId = debateId,
             userId = user.id!!,
         ) ?: throw DebateAccessDeniedException()
-        val isHost = member.role == DebateUserRole.HOST
-        val debateStatus = findDebateStatus(
+
+        return buildStatus(
             debateId = debateId,
+            member = member,
         )
-        val requestList = if (isHost) {
-            val pendingMembers = debateUserRepository.findAllByDebateIdAndStatusOrderByCreatedAtAsc(
+    }
+
+    @Transactional(readOnly = true)
+    fun getStreamSnapshot(
+        debateId: String,
+        userId: String,
+    ): StreamSnapshot {
+        val member = debateUserRepository.findByDebateIdAndUserId(
+            debateId = debateId,
+            userId = userId,
+        ) ?: throw DebateAccessDeniedException()
+
+        return StreamSnapshot(
+            role = member.role,
+            status = buildStatus(
                 debateId = debateId,
-                status = DebateUserStatus.PENDING,
+                member = member,
+            ),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun getMemberRole(
+        debateId: String,
+        userId: String,
+    ): DebateUserRole {
+        val member = debateUserRepository.findByDebateIdAndUserId(
+            debateId = debateId,
+            userId = userId,
+        ) ?: throw DebateAccessDeniedException()
+
+        return member.role
+    }
+
+    @Transactional(readOnly = true)
+    fun getPendingRequestList(
+        debateId: String,
+    ): List<DebateStatusResponse.ParticipationRequest> {
+        val pendingMembers = debateUserRepository.findAllByDebateIdAndStatusOrderByCreatedAtAsc(
+            debateId = debateId,
+            status = DebateUserStatus.PENDING,
+        )
+        val cachedOrder = runCatching {
+            debateQueueRedisRepository.findAll(
+                debateId = debateId,
             )
-            val cachedOrder = runCatching {
-                debateQueueRedisRepository.findAll(
-                    debateId = debateId,
-                )
-            }.getOrNull()
-            val orderedMembers = if (cachedOrder == null) {
-                restoreQueueCache(
-                    debateId = debateId,
-                    pendingMembers = pendingMembers,
-                )
-                pendingMembers
-            } else {
-                val orderByUserId = cachedOrder.withIndex().associate { it.value to it.index }
-                pendingMembers.sortedBy { orderByUserId[it.user.id] ?: Int.MAX_VALUE }
-            }
-            orderedMembers.map {
-                DebateStatusResponse.ParticipationRequest(
-                    userId = it.user.id!!,
-                    nickname = it.user.nickname,
-                    status = it.status,
-                    requestedAt = it.createdAt!!,
-                )
-            }
+        }.getOrNull()
+        val orderedMembers = if (cachedOrder == null) {
+            restoreQueueCache(
+                debateId = debateId,
+                pendingMembers = pendingMembers,
+            )
+            pendingMembers
         } else {
-            null
+            val orderByUserId = cachedOrder.withIndex().associate { it.value to it.index }
+            pendingMembers.sortedBy { orderByUserId[it.user.id] ?: Int.MAX_VALUE }
         }
 
+        return orderedMembers.map {
+            DebateStatusResponse.ParticipationRequest(
+                userId = it.user.id!!,
+                nickname = it.user.nickname,
+                profileImageKey = it.user.profileImageKey,
+                status = it.status,
+                requestedAt = it.createdAt!!,
+            )
+        }
+    }
+
+    private fun buildStatus(
+        debateId: String,
+        member: DebateUser,
+    ): DebateStatusResponse {
+        val isHost = member.role == DebateUserRole.HOST
+
         return DebateStatusResponse(
-            debateStatus = debateStatus,
+            debateStatus = findDebateStatus(
+                debateId = debateId,
+            ),
             guestStatus = if (isHost) null else member.status,
-            requestList = requestList,
+            requestList = if (isHost) {
+                getPendingRequestList(
+                    debateId = debateId,
+                )
+            } else {
+                null
+            },
         )
     }
 
@@ -325,6 +389,19 @@ class DebateParticipationService(
         )
     }
 
+    private fun publishGuestStatusChange(
+        debateId: String,
+        member: DebateUser,
+    ) {
+        eventPublisher.publishEvent(
+            DebateGuestStatusChangedEvent(
+                debateId = debateId,
+                userId = member.user.id!!,
+                status = member.status,
+            ),
+        )
+    }
+
     private fun findDebateStatus(
         debateId: String,
     ): DebateStatus {
@@ -363,6 +440,11 @@ class DebateParticipationService(
             logger.warn(it) { "토론방 참여 대기열 캐시 복구에 실패했습니다. debateId=$debateId" }
         }
     }
+
+    data class StreamSnapshot(
+        val role: DebateUserRole,
+        val status: DebateStatusResponse,
+    )
 
     companion object {
         private const val INVITE_TOKEN_VALID_HOURS = 24L

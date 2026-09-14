@@ -127,8 +127,12 @@ val cleanGeneratedSnippets by tasks.registering(Delete::class) {
     delete(snippetsDir)
 }
 
+val cleanAsyncApiSnippets by tasks.registering(Delete::class) {
+    delete("build/asyncapi-snippets", "build/asyncapi")
+}
+
 tasks.test {
-    dependsOn(cleanGeneratedSnippets)
+    dependsOn(cleanGeneratedSnippets, cleanAsyncApiSnippets)
     systemProperty("org.springframework.restdocs.outputDir", snippetsDir.absolutePath)
 }
 
@@ -144,16 +148,23 @@ val copyOpenApiSpec by tasks.registering(Copy::class) {
     into(layout.buildDirectory.dir("resources/main/static/docs"))
 }
 
-val generateDocs by tasks.registering {
-    group = "documentation"
-    description = "테스트 실행 → OpenAPI 3.0 YAML 생성 → static/docs 복사"
-    dependsOn("copyOpenApiSpec")
+val copyAsyncApiSpec by tasks.registering(Copy::class) {
+    dependsOn(tasks.test)
+    from("build/asyncapi/asyncapi.json")
+    into(layout.buildDirectory.dir("resources/main/static/docs"))
+    onlyIf { file("build/asyncapi/asyncapi.json").exists() }
 }
 
-tasks.named("resolveMainClassName") { dependsOn("copyOpenApiSpec") }
-tasks.bootJar { dependsOn("copyOpenApiSpec") }
-tasks.bootRun { dependsOn("copyOpenApiSpec") }
-tasks.build { dependsOn("copyOpenApiSpec") }
+val generateDocs by tasks.registering {
+    group = "documentation"
+    description = "테스트 실행 → OpenAPI 3.0 YAML 과 AsyncAPI 3.0 JSON 생성 → static/docs 복사"
+    dependsOn("copyOpenApiSpec", "copyAsyncApiSpec")
+}
+
+tasks.named("resolveMainClassName") { dependsOn("copyOpenApiSpec", "copyAsyncApiSpec") }
+tasks.bootJar { dependsOn("copyOpenApiSpec", "copyAsyncApiSpec") }
+tasks.bootRun { dependsOn("copyOpenApiSpec", "copyAsyncApiSpec") }
+tasks.build { dependsOn("copyOpenApiSpec", "copyAsyncApiSpec") }
 
 tasks.named<Jar>("jar") {
     enabled = false

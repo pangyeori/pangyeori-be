@@ -5,6 +5,7 @@ import com.debate.pangyeori.auth.exception.EmailVerificationCodeMismatchExceptio
 import com.debate.pangyeori.auth.exception.EmailVerificationCodeNotFoundException
 import com.debate.pangyeori.auth.exception.EmailVerificationRateLimitedException
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
+import com.debate.pangyeori.common.util.mapStorageFailure
 import com.debate.pangyeori.common.util.maskEmail
 import com.debate.pangyeori.email.sender.EmailSender
 import com.debate.pangyeori.email.exception.EmailSendFailedException
@@ -24,16 +25,17 @@ class EmailVerificationService(
     fun sendCode(
         email: String,
     ) {
-        if (!emailVerificationRedisRepository.trySaveRateLimit(email)) {
-            throw EmailVerificationRateLimitedException()
-        }
-
         val code = generateCode()
-        emailVerificationRedisRepository.saveCode(
-            email = email,
-            code = code,
-        )
-        emailVerificationRedisRepository.resetAttempt(email)
+        mapStorageFailure(logger, "이메일 인증 코드") {
+            if (!emailVerificationRedisRepository.trySaveRateLimit(email)) {
+                throw EmailVerificationRateLimitedException()
+            }
+            emailVerificationRedisRepository.saveCode(
+                email = email,
+                code = code,
+            )
+            emailVerificationRedisRepository.resetAttempt(email)
+        }
         try {
             emailSender.send(
                 to = email,
@@ -51,25 +53,27 @@ class EmailVerificationService(
         email: String,
         code: String,
     ) {
-        if (emailVerificationRedisRepository.isVerified(email)) {
-            throw EmailVerificationAlreadyVerifiedException()
-        }
-
-        val savedCode = emailVerificationRedisRepository.findCode(email)
-            ?: throw EmailVerificationCodeNotFoundException()
-
-        if (savedCode != code) {
-            val attempts = emailVerificationRedisRepository.incrementAttempt(email)
-            if (attempts >= MAX_CONFIRM_ATTEMPTS) {
-                emailVerificationRedisRepository.deleteCode(email)
-                emailVerificationRedisRepository.resetAttempt(email)
+        mapStorageFailure(logger, "이메일 인증") {
+            if (emailVerificationRedisRepository.isVerified(email)) {
+                throw EmailVerificationAlreadyVerifiedException()
             }
-            throw EmailVerificationCodeMismatchException()
-        }
 
-        emailVerificationRedisRepository.deleteCode(email)
-        emailVerificationRedisRepository.resetAttempt(email)
-        emailVerificationRedisRepository.markVerified(email)
+            val savedCode = emailVerificationRedisRepository.findCode(email)
+                ?: throw EmailVerificationCodeNotFoundException()
+
+            if (savedCode != code) {
+                val attempts = emailVerificationRedisRepository.incrementAttempt(email)
+                if (attempts >= MAX_CONFIRM_ATTEMPTS) {
+                    emailVerificationRedisRepository.deleteCode(email)
+                    emailVerificationRedisRepository.resetAttempt(email)
+                }
+                throw EmailVerificationCodeMismatchException()
+            }
+
+            emailVerificationRedisRepository.deleteCode(email)
+            emailVerificationRedisRepository.resetAttempt(email)
+            emailVerificationRedisRepository.markVerified(email)
+        }
         logger.info { "이메일 인증 완료. email=${email.maskEmail()}" }
     }
 

@@ -12,11 +12,7 @@ import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm
-import org.springframework.security.oauth2.jwt.JwtDecoder
-import org.springframework.security.oauth2.jwt.JwtEncoder
-import org.springframework.security.oauth2.jwt.JwtValidators
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
+import org.springframework.security.oauth2.jwt.*
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
@@ -107,6 +103,7 @@ class SecurityConfig {
             "/v3/api-docs/**",
             "/docs/**",
             "/api/v1/users/nickname/duplicate",
+            "/api/v1/debates/*/status/stream",
         )
 
         private val PUBLIC_POST_PATHS = arrayOf(

@@ -1,6 +1,7 @@
 package com.debate.pangyeori.debate.controller
 
 import com.debate.pangyeori.common.dto.ApiResponse
+import com.debate.pangyeori.debate.domain.enums.DebatePosition
 import com.debate.pangyeori.debate.dto.request.DebateCreateRequest
 import com.debate.pangyeori.debate.dto.request.DebateGuestAcceptRequest
 import com.debate.pangyeori.debate.dto.response.DebateCreateResponse
@@ -36,7 +37,9 @@ class DebateController(
             hostEmail = principal.name,
             title = request.title!!,
             description = request.description,
-            hostPosition = request.hostPosition,
+            hostPosition = DebatePosition.fromCode(
+                code = request.hostPosition!!,
+            ),
             turnTimeSeconds = request.turnTimeSeconds!!,
             freeDebateTimeSeconds = request.freeDebateTimeSeconds!!,
         )

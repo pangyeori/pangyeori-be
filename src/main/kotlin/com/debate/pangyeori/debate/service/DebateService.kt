@@ -6,9 +6,6 @@ import com.debate.pangyeori.debate.domain.enums.DebatePosition
 import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 import com.debate.pangyeori.debate.dto.response.DebateCreateResponse
 import com.debate.pangyeori.debate.event.DebateCreatedEvent
-import com.debate.pangyeori.debate.exception.InvalidFreeDebateTimeException
-import com.debate.pangyeori.debate.exception.InvalidPositionException
-import com.debate.pangyeori.debate.exception.InvalidTurnTimeException
 import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.repository.DebateUserRepository
 import com.debate.pangyeori.user.exception.UserNotFoundException
@@ -30,19 +27,10 @@ class DebateService(
         hostEmail: String,
         title: String,
         description: String?,
-        hostPosition: String?,
+        hostPosition: DebatePosition,
         turnTimeSeconds: Int,
         freeDebateTimeSeconds: Int,
     ): DebateCreateResponse {
-        val validatedPosition = DebatePosition.entries.firstOrNull { it.code == hostPosition }
-            ?: throw InvalidPositionException()
-        if (turnTimeSeconds !in MIN_TURN_TIME_SECONDS..MAX_TURN_TIME_SECONDS) {
-            throw InvalidTurnTimeException()
-        }
-        if (freeDebateTimeSeconds !in MIN_FREE_DEBATE_TIME_SECONDS..MAX_FREE_DEBATE_TIME_SECONDS) {
-            throw InvalidFreeDebateTimeException()
-        }
-
         val host = userRepository.findByEmail(
             email = hostEmail,
         ) ?: throw UserNotFoundException()
@@ -52,7 +40,7 @@ class DebateService(
                 host = host,
                 title = title.trim(),
                 description = description?.trim()?.takeIf { it.isNotEmpty() },
-                hostPosition = validatedPosition,
+                hostPosition = hostPosition,
                 turnTimeSeconds = turnTimeSeconds,
                 freeDebateTimeSeconds = freeDebateTimeSeconds,
                 inviteToken = inviteToken,
@@ -63,7 +51,7 @@ class DebateService(
                 debate = debate,
                 user = host,
                 role = DebateUserRole.HOST,
-                position = validatedPosition,
+                position = hostPosition,
             ),
         )
 
@@ -77,12 +65,5 @@ class DebateService(
         return DebateCreateResponse.from(
             debate = debate,
         )
-    }
-
-    companion object {
-        private const val MIN_TURN_TIME_SECONDS = 30
-        private const val MAX_TURN_TIME_SECONDS = 600
-        private const val MIN_FREE_DEBATE_TIME_SECONDS = 60
-        private const val MAX_FREE_DEBATE_TIME_SECONDS = 1800
     }
 }

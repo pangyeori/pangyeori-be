@@ -7,9 +7,6 @@ import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 import com.debate.pangyeori.debate.domain.enums.DebateUserStatus
 import com.debate.pangyeori.debate.event.DebateCreatedEvent
-import com.debate.pangyeori.debate.exception.InvalidFreeDebateTimeException
-import com.debate.pangyeori.debate.exception.InvalidPositionException
-import com.debate.pangyeori.debate.exception.InvalidTurnTimeException
 import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.repository.DebateUserRepository
 import com.debate.pangyeori.user.domain.User
@@ -87,7 +84,7 @@ class DebateServiceTest : BehaviorSpec({
                     hostEmail = email,
                     title = " AI는 인간을 대체할 것인가 ",
                     description = " 토론 설명 ",
-                    hostPosition = "PROS",
+                    hostPosition = DebatePosition.PROS,
                     turnTimeSeconds = 180,
                     freeDebateTimeSeconds = 600,
                 )
@@ -108,56 +105,9 @@ class DebateServiceTest : BehaviorSpec({
                         hostEmail = "missing@pangyeori.com",
                         title = "토론 주제",
                         description = null,
-                        hostPosition = "CONS",
+                        hostPosition = DebatePosition.CONS,
                         turnTimeSeconds = 180,
                         freeDebateTimeSeconds = 600,
-                    )
-                }
-            }
-        }
-    }
-
-    Given("토론방 생성 조건을 검증할 때") {
-        When("포지션이 PROS 또는 CONS가 아니면") {
-            Then("InvalidPositionException을 던진다") {
-                shouldThrow<InvalidPositionException> {
-                    debateService.create(
-                        hostEmail = "host@pangyeori.com",
-                        title = "토론 주제",
-                        description = null,
-                        hostPosition = "INVALID",
-                        turnTimeSeconds = 180,
-                        freeDebateTimeSeconds = 600,
-                    )
-                }
-            }
-        }
-
-        When("턴 시간이 허용 범위를 벗어나면") {
-            Then("InvalidTurnTimeException을 던진다") {
-                shouldThrow<InvalidTurnTimeException> {
-                    debateService.create(
-                        hostEmail = "host@pangyeori.com",
-                        title = "토론 주제",
-                        description = null,
-                        hostPosition = "PROS",
-                        turnTimeSeconds = 29,
-                        freeDebateTimeSeconds = 600,
-                    )
-                }
-            }
-        }
-
-        When("자유 토론 시간이 허용 범위를 벗어나면") {
-            Then("InvalidFreeDebateTimeException을 던진다") {
-                shouldThrow<InvalidFreeDebateTimeException> {
-                    debateService.create(
-                        hostEmail = "host@pangyeori.com",
-                        title = "토론 주제",
-                        description = null,
-                        hostPosition = "CONS",
-                        turnTimeSeconds = 180,
-                        freeDebateTimeSeconds = 1801,
                     )
                 }
             }

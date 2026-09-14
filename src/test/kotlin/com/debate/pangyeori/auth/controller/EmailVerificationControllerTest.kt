@@ -3,8 +3,8 @@ package com.debate.pangyeori.auth.controller
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.auth.service.EmailVerificationService
 import com.debate.pangyeori.email.sender.TestEmailSenderConfig
-import com.debate.pangyeori.support.RestDocsMvcTest
-import com.debate.pangyeori.support.dsl.restDocs
+import com.debate.pangyeori.support.restdocs.RestDocsMvcTest
+import com.debate.pangyeori.support.restdocs.dsl.restDocs
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Import

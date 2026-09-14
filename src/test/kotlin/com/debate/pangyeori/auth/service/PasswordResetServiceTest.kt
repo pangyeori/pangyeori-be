@@ -5,6 +5,7 @@ import com.debate.pangyeori.auth.exception.PasswordResetTokenNotFoundException
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.auth.repository.PasswordResetRedisRepository
 import com.debate.pangyeori.auth.repository.RefreshTokenRepository
+import com.debate.pangyeori.common.exception.StorageUnavailableException
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.domain.enums.UserRole
 import com.debate.pangyeori.user.domain.enums.UserStatus
@@ -25,6 +26,7 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.verify
+import org.springframework.data.redis.RedisConnectionFailureException
 import org.springframework.security.crypto.password.PasswordEncoder
 
 class PasswordResetServiceTest : BehaviorSpec({
@@ -143,6 +145,49 @@ class PasswordResetServiceTest : BehaviorSpec({
                 }
             }
         }
+
+        When("이메일 인증 표식 조회가 Redis 장애로 실패하면") {
+            Then("StorageUnavailableException을 던진다") {
+                every {
+                    emailVerificationRedisRepository.isVerified(
+                        email = email,
+                    )
+                } throws RedisConnectionFailureException("redis down")
+
+                shouldThrow<StorageUnavailableException> {
+                    passwordResetService.issueToken(
+                        email = email,
+                    )
+                }
+            }
+        }
+
+        When("재설정 토큰 저장이 Redis 장애로 실패하면") {
+            Then("StorageUnavailableException을 던진다") {
+                every {
+                    emailVerificationRedisRepository.isVerified(
+                        email = email,
+                    )
+                } returns true
+                every {
+                    userRepository.existsByEmail(
+                        email = email,
+                    )
+                } returns true
+                every {
+                    passwordResetRedisRepository.saveToken(
+                        email = email,
+                        token = any(),
+                    )
+                } throws RedisConnectionFailureException("redis down")
+
+                shouldThrow<StorageUnavailableException> {
+                    passwordResetService.issueToken(
+                        email = email,
+                    )
+                }
+            }
+        }
     }
 
     Given("발급된 재설정 토큰으로 비밀번호 재설정을 요청하면") {
@@ -202,6 +247,59 @@ class PasswordResetServiceTest : BehaviorSpec({
                 } returns null
 
                 shouldThrow<PasswordResetTokenNotFoundException> {
+                    passwordResetService.resetPassword(
+                        passwordResetToken = passwordResetToken,
+                        newPassword = newPassword,
+                    )
+                }
+            }
+        }
+
+        When("토큰 조회가 Redis 장애로 실패하면") {
+            Then("StorageUnavailableException을 던진다") {
+                every {
+                    passwordResetRedisRepository.findEmailByToken(
+                        token = passwordResetToken,
+                    )
+                } throws RedisConnectionFailureException("redis down")
+
+                shouldThrow<StorageUnavailableException> {
+                    passwordResetService.resetPassword(
+                        passwordResetToken = passwordResetToken,
+                        newPassword = newPassword,
+                    )
+                }
+            }
+        }
+
+        When("토큰 삭제가 Redis 장애로 실패하면") {
+            Then("StorageUnavailableException을 던진다") {
+                val user = activeUser()
+                every {
+                    passwordResetRedisRepository.findEmailByToken(
+                        token = passwordResetToken,
+                    )
+                } returns email
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user
+                every {
+                    passwordEncoder.encode(newPassword)
+                } returns encodedPassword
+                every {
+                    refreshTokenRepository.findAllByUserAndRevokedAtIsNull(
+                        user = user,
+                    )
+                } returns emptyList()
+                every {
+                    passwordResetRedisRepository.deleteToken(
+                        token = passwordResetToken,
+                    )
+                } throws RedisConnectionFailureException("redis down")
+
+                shouldThrow<StorageUnavailableException> {
                     passwordResetService.resetPassword(
                         passwordResetToken = passwordResetToken,
                         newPassword = newPassword,

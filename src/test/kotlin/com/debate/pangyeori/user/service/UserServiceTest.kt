@@ -3,6 +3,7 @@ package com.debate.pangyeori.user.service
 import com.debate.pangyeori.auth.domain.RefreshToken
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.auth.repository.RefreshTokenRepository
+import com.debate.pangyeori.common.exception.StorageUnavailableException
 import com.debate.pangyeori.storage.client.ObjectStorage
 import com.debate.pangyeori.support.fixture.setAuditFields
 import com.debate.pangyeori.user.domain.User
@@ -21,6 +22,7 @@ import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.*
+import org.springframework.data.redis.RedisConnectionFailureException
 import org.springframework.security.crypto.password.PasswordEncoder
 import software.amazon.awssdk.core.exception.SdkClientException
 
@@ -142,6 +144,24 @@ class UserServiceTest : BehaviorSpec({
                 }
             }
         }
+
+        When("이메일 인증 표식 조회가 Redis 장애로 실패하면") {
+            Then("StorageUnavailableException을 던진다") {
+                every {
+                    emailVerificationRedisRepository.isVerified(
+                        email = email,
+                    )
+                } throws RedisConnectionFailureException("redis down")
+
+                shouldThrow<StorageUnavailableException> {
+                    userService.createUser(
+                        email = email,
+                        password = password,
+                        nickname = nickname,
+                    )
+                }
+            }
+        }
     }
 
     Given("인증된 이메일로 회원가입 요청이 오면") {
@@ -185,6 +205,40 @@ class UserServiceTest : BehaviorSpec({
                 } returns true
 
                 shouldThrow<NicknameAlreadyExistsException> {
+                    userService.createUser(
+                        email = email,
+                        password = password,
+                        nickname = nickname,
+                    )
+                }
+            }
+        }
+
+        When("회원 저장 후 인증 표식 제거가 Redis 장애로 실패하면") {
+            Then("StorageUnavailableException을 던진다") {
+                every {
+                    userRepository.existsByEmail(
+                        email = email,
+                    )
+                } returns false
+                every {
+                    userRepository.existsByNickname(
+                        nickname = nickname,
+                    )
+                } returns false
+                every {
+                    passwordEncoder.encode(password)
+                } returns "encoded-password"
+                every {
+                    userRepository.save(any())
+                } returns activeUser()
+                every {
+                    emailVerificationRedisRepository.clearVerified(
+                        email = email,
+                    )
+                } throws RedisConnectionFailureException("redis down")
+
+                shouldThrow<StorageUnavailableException> {
                     userService.createUser(
                         email = email,
                         password = password,

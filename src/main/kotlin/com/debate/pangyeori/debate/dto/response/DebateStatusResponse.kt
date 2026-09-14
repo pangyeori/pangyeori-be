@@ -12,6 +12,7 @@ data class DebateStatusResponse(
     data class ParticipationRequest(
         val userId: String,
         val nickname: String,
+        val profileImageKey: String?,
         val status: DebateUserStatus,
         val requestedAt: LocalDateTime,
     )

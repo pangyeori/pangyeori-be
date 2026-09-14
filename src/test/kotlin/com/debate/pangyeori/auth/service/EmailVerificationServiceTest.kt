@@ -5,12 +5,14 @@ import com.debate.pangyeori.auth.exception.EmailVerificationCodeMismatchExceptio
 import com.debate.pangyeori.auth.exception.EmailVerificationCodeNotFoundException
 import com.debate.pangyeori.auth.exception.EmailVerificationRateLimitedException
 import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
+import com.debate.pangyeori.common.exception.StorageUnavailableException
 import com.debate.pangyeori.email.sender.EmailSender
 import com.debate.pangyeori.email.exception.EmailSendFailedException
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.string.shouldMatch
 import io.mockk.*
+import org.springframework.data.redis.RedisConnectionFailureException
 import org.springframework.mail.MailSendException
 
 class EmailVerificationServiceTest : BehaviorSpec({
@@ -98,6 +100,20 @@ class EmailVerificationServiceTest : BehaviorSpec({
                 }
             }
         }
+
+        When("Redis 저장소 접근이 실패하면") {
+            Then("StorageUnavailableException을 던진다") {
+                every {
+                    emailVerificationRedisRepository.trySaveRateLimit(email)
+                } throws RedisConnectionFailureException("redis down")
+
+                shouldThrow<StorageUnavailableException> {
+                    emailVerificationService.sendCode(
+                        email = email,
+                    )
+                }
+            }
+        }
     }
 
     Given("이메일 인증 코드 검증 요청이 오면") {
@@ -166,6 +182,21 @@ class EmailVerificationServiceTest : BehaviorSpec({
                 every { emailVerificationRedisRepository.isVerified(email) } returns true
 
                 shouldThrow<EmailVerificationAlreadyVerifiedException> {
+                    emailVerificationService.confirmCode(
+                        email = email,
+                        code = "123456",
+                    )
+                }
+            }
+        }
+
+        When("Redis 저장소 접근이 실패하면") {
+            Then("StorageUnavailableException을 던진다") {
+                every {
+                    emailVerificationRedisRepository.isVerified(email)
+                } throws RedisConnectionFailureException("redis down")
+
+                shouldThrow<StorageUnavailableException> {
                     emailVerificationService.confirmCode(
                         email = email,
                         code = "123456",
