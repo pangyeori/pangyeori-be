@@ -8,6 +8,7 @@ package com.debate.pangyeori.support.asyncapi.generator
  */
 internal class SseSnippet(
     private val channelPath: String,
+    private val explicitChannelName: String?,
     private val channelDescription: String,
     private val serverRef: String,
     private val parameters: List<Pair<String, String>>,
@@ -15,7 +16,7 @@ internal class SseSnippet(
 ) : AsyncApiSnippet {
 
     override fun toFragment(): Map<String, Any> {
-        val channelName = channelNameFromPath(
+        val channelName = explicitChannelName ?: channelNameFromPath(
             path = channelPath,
         )
 

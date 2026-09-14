@@ -109,8 +109,9 @@ class SseDocumentationDsl internal constructor(
         path: String,
         protocol: String,
         description: String,
+        name: String? = null,
     ) {
-        channelSpec = ChannelSpec(path, protocol, description)
+        channelSpec = ChannelSpec(path, protocol, description, name)
     }
 
     fun parameter(
@@ -185,6 +186,7 @@ class SseDocumentationDsl internal constructor(
 
         val fragment = SseSnippet(
             channelPath = channel.path,
+            explicitChannelName = channel.name,
             channelDescription = channel.description,
             serverRef = AsyncApiDocumentStore.SERVER_REF,
             parameters = resolveParameters(

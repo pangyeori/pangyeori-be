@@ -2,11 +2,14 @@ package com.debate.pangyeori.support.asyncapi.dsl
 
 /**
  * `channel(path, protocol, description)`로 선언하는 채널 메타데이터.
+ *
+ * [name]을 지정하지 않으면 경로에서 채널명을 자동으로 유도한다(camelCase 조합).
  */
 internal data class ChannelSpec(
     val path: String,
     val protocol: String,
     val description: String,
+    val name: String? = null,
 )
 
 /**
