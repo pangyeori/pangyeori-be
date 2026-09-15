@@ -40,6 +40,9 @@ class SecurityConfig {
             it.authenticationEntryPoint(authenticationEntryPoint)
             it.accessDeniedHandler(accessDeniedHandler)
         }
+        .headers {
+            it.frameOptions { frameOptions -> frameOptions.sameOrigin() }
+        }
         .authorizeHttpRequests {
             it.requestMatchers(HttpMethod.GET, *PUBLIC_GET_PATHS).permitAll()
             it.requestMatchers(HttpMethod.POST, *PUBLIC_POST_PATHS).permitAll()
@@ -99,8 +102,6 @@ class SecurityConfig {
 
         private val PUBLIC_GET_PATHS = arrayOf(
             "/actuator/health",
-            "/swagger-ui/**",
-            "/v3/api-docs/**",
             "/docs/**",
             "/api/v1/users/nickname/duplicate",
             "/api/v1/debates/*/status/stream",
