@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -58,6 +59,19 @@ class GlobalExceptionHandler {
         )
         return ResponseEntity
             .badRequest()
+            .body(ApiResponse.fail(error))
+    }
+
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun handleNoResourceFoundException(
+        e: NoResourceFoundException,
+    ): ResponseEntity<ApiResponse<Nothing>> {
+        val error = ApiError(
+            code = ErrorCode.RESOURCE_NOT_FOUND.name,
+            message = ErrorCode.RESOURCE_NOT_FOUND.message,
+        )
+        return ResponseEntity
+            .status(ErrorCode.RESOURCE_NOT_FOUND.status)
             .body(ApiResponse.fail(error))
     }
 

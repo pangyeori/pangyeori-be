@@ -1,0 +1,35 @@
+html,
+body {
+    margin: 0;
+    height: 100%;
+}
+
+#docs-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px;
+    background: #1b1b1b;
+}
+
+#docs-tabs button {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #3b4151;
+    color: #fff;
+}
+
+#docs-tabs button.active {
+    background: #61affe;
+    color: #1b1b1b;
+}
+
+#viewer {
+    display: block;
+    width: 100%;
+    height: calc(100% - 52px);
+    border: none;
+}

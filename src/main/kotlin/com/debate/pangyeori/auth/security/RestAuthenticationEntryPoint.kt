@@ -19,7 +19,7 @@ class RestAuthenticationEntryPoint(
     ) {
         errorResponseWriter.write(
             response = response,
-            errorCode = ErrorCode.INVALID_TOKEN,
+            errorCode = ErrorCode.AUTHENTICATION_REQUIRED,
         )
     }
 }

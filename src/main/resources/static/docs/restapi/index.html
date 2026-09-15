@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Pangyeori REST API Docs</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.32.15/swagger-ui.css" />
+</head>
+
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.32.15/swagger-ui-bundle.js"></script>
+    <script>
+        fetch("./openapi3.yaml")
+            .then((res) => res.text())
+            .then((text) => {
+                const spec = jsyaml.load(text);
+                spec.servers = [{ url: window.location.origin }];
+                SwaggerUIBundle({
+                    spec,
+                    dom_id: '#swagger-ui',
+                    presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+                    layout: "BaseLayout"
+                });
+            });
+    </script>
+</body>
+
+</html>
