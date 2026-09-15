@@ -50,6 +50,7 @@ enum class ErrorCode(
     FILE_TOO_LARGE(HttpStatus.UNPROCESSABLE_ENTITY, "파일 크기가 허용 한도를 초과했습니다."),
 
     // 공통
+    RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 리소스입니다."),
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."),
     EXTERNAL_API_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "외부 서비스 오류가 발생했습니다."),
