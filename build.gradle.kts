@@ -71,9 +71,6 @@ dependencies {
     // Development
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
-    // Swagger UI
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0")
-
     // Logging
     implementation("org.springframework.boot:spring-boot-starter-log4j2")
     implementation("io.github.oshai:kotlin-logging-jvm:6.0.9")
@@ -145,13 +142,13 @@ afterEvaluate {
 val copyOpenApiSpec by tasks.registering(Copy::class) {
     dependsOn("openapi3")
     from("build/api-spec/openapi3.yaml")
-    into(layout.buildDirectory.dir("resources/main/static/docs"))
+    into(layout.buildDirectory.dir("resources/main/static/docs/restapi"))
 }
 
 val copyAsyncApiSpec by tasks.registering(Copy::class) {
     dependsOn(tasks.test)
     from("build/asyncapi/asyncapi.json")
-    into(layout.buildDirectory.dir("resources/main/static/docs"))
+    into(layout.buildDirectory.dir("resources/main/static/docs/asyncapi"))
     onlyIf { file("build/asyncapi/asyncapi.json").exists() }
 }
 
