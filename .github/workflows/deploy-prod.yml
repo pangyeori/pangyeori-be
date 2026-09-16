@@ -46,7 +46,7 @@ jobs:
 
           echo "Verifying: $JAR"
 
-          if ! jar tf "$JAR" | grep -q "BOOT-INF/classes/static/docs/openapi3.yaml"; then
+          if ! jar tf "$JAR" | grep -q "BOOT-INF/classes/static/docs/restapi/openapi3.yaml"; then
             echo "OpenAPI documentation was not packaged in the boot JAR"
             exit 1
           fi
