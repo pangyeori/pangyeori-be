@@ -35,7 +35,7 @@ jobs:
       - name: Generate API docs and build application
         run: ./gradlew generateDocs bootJar --no-daemon
 
-      - name: Verify OpenAPI docs are packaged in the boot JAR
+      - name: Verify API docs are packaged in the boot JAR
         run: |
           JAR=$(find build/libs -name "*.jar" ! -name "*-plain.jar" | head -n 1)
 
@@ -48,6 +48,11 @@ jobs:
 
           if ! jar tf "$JAR" | grep -q "BOOT-INF/classes/static/docs/restapi/openapi3.yaml"; then
             echo "OpenAPI documentation was not packaged in the boot JAR"
+            exit 1
+          fi
+
+          if ! jar tf "$JAR" | grep -q "BOOT-INF/classes/static/docs/asyncapi/asyncapi.json"; then
+            echo "AsyncAPI documentation was not packaged in the boot JAR"
             exit 1
           fi
 
