@@ -64,9 +64,13 @@ class DebateParticipationService(
         return DebateInvitationResponse(
             debateId = debateId,
             title = debate.title,
+            description = debate.description,
+            hostNickname = debate.host.nickname,
             guestPosition = debate.hostPosition.opposite(),
             debateStatus = debate.status,
             guestStatus = guestStatus,
+            turnTimeSeconds = debate.turnTimeSeconds,
+            freeDebateTimeSeconds = debate.freeDebateTimeSeconds,
         )
     }
 
