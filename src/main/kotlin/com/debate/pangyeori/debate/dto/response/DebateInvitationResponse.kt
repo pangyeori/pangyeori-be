@@ -7,7 +7,11 @@ import com.debate.pangyeori.debate.domain.enums.DebateUserStatus
 data class DebateInvitationResponse(
     val debateId: String,
     val title: String,
+    val description: String?,
+    val hostNickname: String,
     val guestPosition: DebatePosition,
     val debateStatus: DebateStatus,
     val guestStatus: DebateUserStatus?,
+    val turnTimeSeconds: Int,
+    val freeDebateTimeSeconds: Int,
 )
