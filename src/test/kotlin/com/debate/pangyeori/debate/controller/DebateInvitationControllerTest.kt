@@ -4,6 +4,7 @@ import com.debate.pangyeori.auth.service.AuthService
 import com.debate.pangyeori.debate.domain.enums.DebatePosition
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.repository.DebateRepository
+import com.debate.pangyeori.debate.service.DebateParticipationService
 import com.debate.pangyeori.debate.service.DebateService
 import com.debate.pangyeori.support.restdocs.RestDocsMvcTest
 import com.debate.pangyeori.support.restdocs.dsl.restDocs
@@ -26,6 +27,9 @@ class DebateInvitationControllerTest : RestDocsMvcTest() {
 
     @Autowired
     private lateinit var debateService: DebateService
+
+    @Autowired
+    private lateinit var debateParticipationService: DebateParticipationService
 
     @Autowired
     private lateinit var debateRepository: DebateRepository
@@ -79,6 +83,62 @@ class DebateInvitationControllerTest : RestDocsMvcTest() {
         )
 
         restDocs(mockMvc, "debate-invitations/get") {
+            summary("초대 링크 유효성 확인")
+            tag("Debates")
+            request {
+                get("/api/v1/debate-invitations/{token}")
+                header("Authorization", "Bearer $guestToken")
+                pathParameters {
+                    param("token", debate.inviteToken, "초대 토큰")
+                }
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "초대 정보") {
+                        field("debateId", "토론방 ID")
+                        field("title", "토론 주제")
+                        field("description", "토론 설명").optional()
+                        field("hostNickname", "방장 닉네임")
+                        field("guestPosition", "게스트 포지션")
+                        field("debateStatus", "토론방 상태")
+                        field("guestStatus", "요청자의 참여 상태").optional()
+                        field("turnTimeSeconds", "발언 턴 제한 시간(초)")
+                        field("freeDebateTimeSeconds", "자유 토론 제한 시간(초)")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `참여 요청을 취소한 게스트가 다시 조회하면 취소된 상태를 그대로 반환한다`() {
+        val hostEmail = "participation-cancelled-host@pangyeori.com"
+        issueAccessToken(
+            email = hostEmail,
+            nickname = "참여취소방장",
+        )
+        val guestEmail = "participation-cancelled-guest@pangyeori.com"
+        val guestToken = issueAccessToken(
+            email = guestEmail,
+            nickname = "참여취소게스트",
+        )
+        val debate = createDebate(
+            hostEmail = hostEmail,
+            title = "참여 취소 후 초대 재조회 토론",
+        )
+        debateParticipationService.requestParticipation(
+            debateId = debate.id,
+            userEmail = guestEmail,
+        )
+        debateParticipationService.cancelParticipation(
+            debateId = debate.id,
+            userEmail = guestEmail,
+        )
+
+        restDocs(mockMvc, "debate-invitations/get-guest-cancelled") {
             summary("초대 링크 유효성 확인")
             tag("Debates")
             request {
