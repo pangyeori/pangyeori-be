@@ -95,9 +95,13 @@ class DebateInvitationControllerTest : RestDocsMvcTest() {
                     obj("data", "초대 정보") {
                         field("debateId", "토론방 ID")
                         field("title", "토론 주제")
+                        field("description", "토론 설명").optional()
+                        field("hostNickname", "방장 닉네임")
                         field("guestPosition", "게스트 포지션")
                         field("debateStatus", "토론방 상태")
                         field("guestStatus", "요청자의 참여 상태").optional()
+                        field("turnTimeSeconds", "발언 턴 제한 시간(초)")
+                        field("freeDebateTimeSeconds", "자유 토론 제한 시간(초)")
                     }
                     field("error", "오류 정보").optional()
                 }
