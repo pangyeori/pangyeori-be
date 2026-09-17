@@ -71,6 +71,7 @@ class DebateParticipationService(
             guestStatus = guestStatus,
             turnTimeSeconds = debate.turnTimeSeconds,
             freeDebateTimeSeconds = debate.freeDebateTimeSeconds,
+            createdAt = debate.createdAt!!,
         )
     }
 
