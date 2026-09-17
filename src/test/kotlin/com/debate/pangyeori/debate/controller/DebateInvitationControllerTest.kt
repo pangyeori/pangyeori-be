@@ -106,6 +106,7 @@ class DebateInvitationControllerTest : RestDocsMvcTest() {
                         field("guestStatus", "요청자의 참여 상태").optional()
                         field("turnTimeSeconds", "발언 턴 제한 시간(초)")
                         field("freeDebateTimeSeconds", "자유 토론 제한 시간(초)")
+                        field("createdAt", "토론방 생성 시각")
                     }
                     field("error", "오류 정보").optional()
                 }
@@ -162,6 +163,7 @@ class DebateInvitationControllerTest : RestDocsMvcTest() {
                         field("guestStatus", "요청자의 참여 상태").optional()
                         field("turnTimeSeconds", "발언 턴 제한 시간(초)")
                         field("freeDebateTimeSeconds", "자유 토론 제한 시간(초)")
+                        field("createdAt", "토론방 생성 시각")
                     }
                     field("error", "오류 정보").optional()
                 }
