@@ -6,5 +6,11 @@ enum class DebateUserRole(
     override val code: String,
 ) : CodeEnum {
     HOST("HOST"),
-    GUEST("GUEST"),
+    GUEST("GUEST");
+
+    companion object {
+        fun fromCode(
+            code: String,
+        ) = entries.first { it.code == code }
+    }
 }

@@ -1,11 +1,16 @@
 package com.debate.pangyeori.debate.controller
 
 import com.debate.pangyeori.common.dto.ApiResponse
+import com.debate.pangyeori.common.dto.CursorPage
 import com.debate.pangyeori.debate.domain.enums.DebatePosition
+import com.debate.pangyeori.debate.domain.enums.DebateStatus
+import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 import com.debate.pangyeori.debate.dto.request.DebateCreateRequest
 import com.debate.pangyeori.debate.dto.request.DebateGuestAcceptRequest
+import com.debate.pangyeori.debate.dto.request.DebateListRequest
 import com.debate.pangyeori.debate.dto.response.DebateCreateResponse
 import com.debate.pangyeori.debate.dto.response.DebateGuestAcceptResponse
+import com.debate.pangyeori.debate.dto.response.DebateListResponse
 import com.debate.pangyeori.debate.dto.response.DebateParticipationResponse
 import com.debate.pangyeori.debate.dto.response.DebateStatusResponse
 import com.debate.pangyeori.debate.service.DebateParticipationService
@@ -45,6 +50,35 @@ class DebateController(
         )
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
+            ApiResponse.success(
+                data = response,
+            ),
+        )
+    }
+
+    @GetMapping("/me")
+    fun getMyDebates(
+        principal: Principal,
+        @Valid request: DebateListRequest,
+    ): ResponseEntity<ApiResponse<CursorPage<DebateListResponse>>> {
+        val response = debateService.getMyDebates(
+            userEmail = principal.name,
+            status = request.status?.let {
+                DebateStatus.fromCode(
+                    code = it,
+                )
+            },
+            role = request.role?.let {
+                DebateUserRole.fromCode(
+                    code = it,
+                )
+            },
+            keyword = request.keyword,
+            cursor = request.cursor,
+            pageSize = request.pageSize,
+        )
+
+        return ResponseEntity.ok(
             ApiResponse.success(
                 data = response,
             ),
