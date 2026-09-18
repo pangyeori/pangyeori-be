@@ -41,3 +41,4 @@ out/
 
 ### Env ###
 .env.*
+run-local.ps1

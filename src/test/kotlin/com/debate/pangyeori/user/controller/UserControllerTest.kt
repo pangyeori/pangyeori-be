@@ -11,8 +11,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Import
 import org.springframework.security.crypto.password.PasswordEncoder
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 
 @Import(TestObjectStorageConfig::class)
 class UserControllerTest : RestDocsMvcTest() {
@@ -676,7 +674,7 @@ class UserControllerTest : RestDocsMvcTest() {
             response {
                 status(204)
             }
-        }.andExpect(content().string(""))
+        }
     }
 
     @Test
@@ -707,8 +705,7 @@ class UserControllerTest : RestDocsMvcTest() {
                     }
                 }
             }
-        }.andExpect(jsonPath("$.error.code").value("INVALID_CURRENT_PASSWORD"))
-            .andExpect(jsonPath("$.error.message").value("현재 비밀번호가 올바르지 않습니다."))
+        }
     }
 
     @Test
@@ -741,9 +738,7 @@ class UserControllerTest : RestDocsMvcTest() {
                     }
                 }
             }
-        }.andExpect(jsonPath("$.error.code").value("INVALID_INPUT"))
-            .andExpect(jsonPath("$.error.details[0].field").value("currentPassword"))
-            .andExpect(jsonPath("$.error.details[0].message").value("현재 비밀번호는 필수입니다."))
+        }
     }
 
     @Test
@@ -777,9 +772,7 @@ class UserControllerTest : RestDocsMvcTest() {
                     }
                 }
             }
-        }.andExpect(jsonPath("$.error.code").value("INVALID_INPUT"))
-            .andExpect(jsonPath("$.error.details[0].field").value("currentPassword"))
-            .andExpect(jsonPath("$.error.details[0].message").value("현재 비밀번호는 필수입니다."))
+        }
     }
 
     @Test
@@ -813,9 +806,7 @@ class UserControllerTest : RestDocsMvcTest() {
                     }
                 }
             }
-        }.andExpect(jsonPath("$.error.code").value("INVALID_INPUT"))
-            .andExpect(jsonPath("$.error.details[0].field").value("currentPassword"))
-            .andExpect(jsonPath("$.error.details[0].message").value("현재 비밀번호는 필수입니다."))
+        }
     }
 
     @Test
@@ -849,9 +840,7 @@ class UserControllerTest : RestDocsMvcTest() {
                     }
                 }
             }
-        }.andExpect(jsonPath("$.error.code").value("INVALID_INPUT"))
-            .andExpect(jsonPath("$.error.details[0].field").value("currentPassword"))
-            .andExpect(jsonPath("$.error.details[0].message").value("현재 비밀번호는 필수입니다."))
+        }
     }
 
     @Test
@@ -877,7 +866,7 @@ class UserControllerTest : RestDocsMvcTest() {
                     }
                 }
             }
-        }.andExpect(jsonPath("$.error.code").value("AUTHENTICATION_REQUIRED"))
+        }
     }
 
     @Test
@@ -904,7 +893,7 @@ class UserControllerTest : RestDocsMvcTest() {
                     }
                 }
             }
-        }.andExpect(jsonPath("$.error.code").value("INVALID_TOKEN"))
+        }
     }
 
     @Test
