@@ -73,7 +73,7 @@ class DebateService(
     @Transactional(readOnly = true)
     fun getMyDebates(
         userEmail: String,
-        status: DebateStatus?,
+        status: List<DebateStatus>?,
         role: DebateUserRole?,
         keyword: String?,
         cursor: String?,

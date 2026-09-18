@@ -13,7 +13,7 @@ class DebateUserQueryRepositoryImpl(
 ) : DebateUserQueryRepository {
     override fun findAllParticipating(
         userId: String,
-        status: DebateStatus?,
+        status: List<DebateStatus>?,
         role: DebateUserRole?,
         keyword: String?,
         cursor: String?,
@@ -32,7 +32,7 @@ class DebateUserQueryRepositoryImpl(
         ).whereAnd(
             path(DebateUser::user)(User::id).equal(userId),
             path(DebateUser::status).`in`(PARTICIPATING_STATUSES),
-            status?.let { path(Debate::status).equal(it) },
+            status?.let { path(Debate::status).`in`(it) },
             role?.let { path(DebateUser::role).equal(it) },
             keyword?.let {
                 or(

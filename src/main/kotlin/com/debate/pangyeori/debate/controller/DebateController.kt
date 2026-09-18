@@ -63,7 +63,7 @@ class DebateController(
     ): ResponseEntity<ApiResponse<CursorPage<DebateListResponse>>> {
         val response = debateService.getMyDebates(
             userEmail = principal.name,
-            status = request.status?.let {
+            status = request.status?.map {
                 DebateStatus.fromCode(
                     code = it,
                 )

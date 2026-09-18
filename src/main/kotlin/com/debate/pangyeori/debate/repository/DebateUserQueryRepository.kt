@@ -7,7 +7,7 @@ import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 interface DebateUserQueryRepository {
     fun findAllParticipating(
         userId: String,
-        status: DebateStatus?,
+        status: List<DebateStatus>?,
         role: DebateUserRole?,
         keyword: String?,
         cursor: String?,
