@@ -4,7 +4,7 @@ import com.debate.pangyeori.debate.domain.DebateUser
 import com.debate.pangyeori.debate.domain.enums.DebateUserStatus
 import org.springframework.data.jpa.repository.JpaRepository
 
-interface DebateUserRepository : JpaRepository<DebateUser, String> {
+interface DebateUserRepository : JpaRepository<DebateUser, String>, DebateUserQueryRepository {
     fun findByDebateIdAndUserId(
         debateId: String,
         userId: String,

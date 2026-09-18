@@ -10,5 +10,11 @@ enum class DebateStatus(
     IN_PROGRESS("IN_PROGRESS"),
     PAUSED("PAUSED"),
     FINISHED("FINISHED"),
-    CANCELLED("CANCELLED"),
+    CANCELLED("CANCELLED");
+
+    companion object {
+        fun fromCode(
+            code: String,
+        ) = entries.first { it.code == code }
+    }
 }

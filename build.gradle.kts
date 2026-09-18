@@ -64,6 +64,11 @@ dependencies {
     // Tsid
     implementation("io.hypersistence:hypersistence-utils-hibernate-71:3.15.4")
 
+    // Kotlin JDSL
+    implementation("com.linecorp.kotlin-jdsl:jpql-dsl:3.9.0")
+    implementation("com.linecorp.kotlin-jdsl:jpql-render:3.9.0")
+    implementation("com.linecorp.kotlin-jdsl:spring-data-jpa-boot4-support:3.9.0")
+
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")

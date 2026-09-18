@@ -61,15 +61,35 @@ class DebateControllerTest : RestDocsMvcTest() {
     private fun createDebate(
         hostEmail: String,
         title: String,
+        description: String? = null,
         hostPosition: DebatePosition = DebatePosition.PROS,
     ) = debateService.create(
         hostEmail = hostEmail,
         title = title,
-        description = null,
+        description = description,
         hostPosition = hostPosition,
         turnTimeSeconds = 180,
         freeDebateTimeSeconds = 600,
     )
+
+    private fun joinAsGuest(
+        debateId: String,
+        hostEmail: String,
+        guestEmail: String,
+    ) {
+        debateParticipationService.requestParticipation(
+            debateId = debateId,
+            userEmail = guestEmail,
+        )
+        val guest = userRepository.findByEmail(
+            email = guestEmail,
+        )!!
+        debateParticipationService.acceptGuest(
+            debateId = debateId,
+            hostEmail = hostEmail,
+            guestUserId = guest.id!!,
+        )
+    }
 
     @Test
     fun `토론방을 생성한다`() {
@@ -1082,6 +1102,556 @@ class DebateControllerTest : RestDocsMvcTest() {
                         array("details", "필드별 검증 오류 목록") {
                             field("field", "검증 실패 필드")
                             field("message", "검증 실패 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `내가 속한 토론방 목록을 최신순으로 조회한다`() {
+        val myEmail = "my-debates@pangyeori.com"
+        val myToken = issueAccessToken(
+            email = myEmail,
+            nickname = "목록조회자",
+        )
+        val firstGuestEmail = "my-debates-guest-1@pangyeori.com"
+        issueAccessToken(
+            email = firstGuestEmail,
+            nickname = "목록게스트1",
+        )
+        val secondGuestEmail = "my-debates-guest-2@pangyeori.com"
+        issueAccessToken(
+            email = secondGuestEmail,
+            nickname = "목록게스트2",
+        )
+        val otherHostEmail = "my-debates-other-host@pangyeori.com"
+        issueAccessToken(
+            email = otherHostEmail,
+            nickname = "목록타방장",
+        )
+        createDebate(
+            hostEmail = myEmail,
+            title = "첫 번째 토론",
+        ).also {
+            joinAsGuest(
+                debateId = it.id,
+                hostEmail = myEmail,
+                guestEmail = firstGuestEmail,
+            )
+        }
+        val middle = createDebate(
+            hostEmail = myEmail,
+            title = "두 번째 토론",
+        )
+        joinAsGuest(
+            debateId = middle.id,
+            hostEmail = myEmail,
+            guestEmail = secondGuestEmail,
+        )
+        val newest = createDebate(
+            hostEmail = otherHostEmail,
+            title = "세 번째 토론",
+        )
+        joinAsGuest(
+            debateId = newest.id,
+            hostEmail = otherHostEmail,
+            guestEmail = myEmail,
+        )
+
+        restDocs(mockMvc, "debates/get-my-list") {
+            summary("내 토론방 목록 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/me")
+                header("Authorization", "Bearer $myToken")
+                queryParameters {
+                    param(
+                        "status",
+                        null,
+                        "토론방 상태 필터 (WAITING, READY, IN_PROGRESS, PAUSED, FINISHED, CANCELLED)"
+                    ).optional()
+                    param("role", null, "내 역할 필터 (HOST, GUEST)").optional()
+                    param("keyword", null, "토론 주제·설명 검색어").optional()
+                    param("cursor", null, "이전 응답의 nextCursor").optional()
+                    param("pageSize", "2", "페이지 크기 (기본 20, 최대 50)").optional()
+                }
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "내 토론방 목록") {
+                        array("items", "토론방 목록") {
+                            field("debateId", "토론방 ID")
+                            field("title", "토론 주제")
+                            field("description", "토론 설명").optional()
+                            field("debateStatus", "토론방 상태")
+                            field("currentStage", "현재 진행 단계")
+                            field("myRole", "내 역할")
+                            field("myPosition", "내 포지션")
+                            obj("opponent", "상대방 정보") {
+                                field("userId", "상대방 사용자 ID")
+                                field("nickname", "상대방 닉네임")
+                                field("profileImageKey", "상대방 프로필 이미지 키").optional()
+                            }
+                            field("turnTimeSeconds", "턴당 발언 제한 시간")
+                            field("freeDebateTimeSeconds", "자유 토론 제한 시간")
+                            field("createdAt", "토론방 생성 시각")
+                        }
+                        field("nextCursor", "다음 페이지 커서").optional()
+                        field("hasNext", "다음 페이지 존재 여부")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `커서를 지정해 내 토론방 목록의 다음 페이지를 조회한다`() {
+        val myEmail = "my-debates-cursor@pangyeori.com"
+        val myToken = issueAccessToken(
+            email = myEmail,
+            nickname = "커서목록조회자",
+        )
+        val firstGuestEmail = "my-debates-cursor-guest-1@pangyeori.com"
+        issueAccessToken(
+            email = firstGuestEmail,
+            nickname = "커서목록게스트1",
+        )
+        val secondGuestEmail = "my-debates-cursor-guest-2@pangyeori.com"
+        issueAccessToken(
+            email = secondGuestEmail,
+            nickname = "커서목록게스트2",
+        )
+        val otherHostEmail = "my-debates-cursor-other-host@pangyeori.com"
+        issueAccessToken(
+            email = otherHostEmail,
+            nickname = "커서목록타방장",
+        )
+        createDebate(
+            hostEmail = myEmail,
+            title = "첫 번째 토론",
+        ).also {
+            joinAsGuest(
+                debateId = it.id,
+                hostEmail = myEmail,
+                guestEmail = firstGuestEmail,
+            )
+        }
+        val middle = createDebate(
+            hostEmail = myEmail,
+            title = "두 번째 토론",
+        )
+        joinAsGuest(
+            debateId = middle.id,
+            hostEmail = myEmail,
+            guestEmail = secondGuestEmail,
+        )
+        val newest = createDebate(
+            hostEmail = otherHostEmail,
+            title = "세 번째 토론",
+        )
+        joinAsGuest(
+            debateId = newest.id,
+            hostEmail = otherHostEmail,
+            guestEmail = myEmail,
+        )
+
+        restDocs(mockMvc, "debates/get-my-list-next-page") {
+            summary("내 토론방 목록 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/me")
+                header("Authorization", "Bearer $myToken")
+                queryParameters {
+                    param("cursor", middle.id, "이전 응답의 nextCursor").optional()
+                    param("pageSize", "2", "페이지 크기 (기본 20, 최대 50)").optional()
+                }
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "내 토론방 목록") {
+                        array("items", "토론방 목록") {
+                            field("debateId", "토론방 ID")
+                            field("title", "토론 주제")
+                            field("description", "토론 설명").optional()
+                            field("debateStatus", "토론방 상태")
+                            field("currentStage", "현재 진행 단계")
+                            field("myRole", "내 역할")
+                            field("myPosition", "내 포지션")
+                            obj("opponent", "상대방 정보") {
+                                field("userId", "상대방 사용자 ID")
+                                field("nickname", "상대방 닉네임")
+                                field("profileImageKey", "상대방 프로필 이미지 키").optional()
+                            }
+                            field("turnTimeSeconds", "턴당 발언 제한 시간")
+                            field("freeDebateTimeSeconds", "자유 토론 제한 시간")
+                            field("createdAt", "토론방 생성 시각")
+                        }
+                        field("nextCursor", "다음 페이지 커서").optional()
+                        field("hasNext", "다음 페이지 존재 여부")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `상태와 역할과 검색어로 내 토론방 목록을 필터링한다`() {
+        val myEmail = "my-debates-filter@pangyeori.com"
+        val myToken = issueAccessToken(
+            email = myEmail,
+            nickname = "필터조회자",
+        )
+        val otherHostEmail = "my-debates-filter-host@pangyeori.com"
+        issueAccessToken(
+            email = otherHostEmail,
+            nickname = "필터타방장",
+        )
+        createDebate(
+            hostEmail = myEmail,
+            title = "첫 번째 토론",
+            description = "[필터매칭] status=WAITING, role=HOST, keyword=필터매칭 조건에 모두 일치해 조회됩니다.",
+        )
+        createDebate(
+            hostEmail = myEmail,
+            title = "두 번째 토론",
+        )
+        val requested = createDebate(
+            hostEmail = otherHostEmail,
+            title = "세 번째 토론",
+            description = "[필터매칭] keyword는 일치하지만 role=GUEST라 조회되지 않습니다.",
+        )
+        debateParticipationService.requestParticipation(
+            debateId = requested.id,
+            userEmail = myEmail,
+        )
+
+        restDocs(mockMvc, "debates/get-my-list-filtered") {
+            summary("내 토론방 목록 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/me")
+                header("Authorization", "Bearer $myToken")
+                queryParameters {
+                    param(
+                        "status",
+                        "WAITING",
+                        "토론방 상태 필터 (WAITING, READY, IN_PROGRESS, PAUSED, FINISHED, CANCELLED)"
+                    ).optional()
+                    param("role", "HOST", "내 역할 필터 (HOST, GUEST)").optional()
+                    param("keyword", "필터매칭", "토론 주제·설명 검색어").optional()
+                }
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "내 토론방 목록") {
+                        array("items", "토론방 목록") {
+                            field("debateId", "토론방 ID")
+                            field("title", "토론 주제")
+                            field("description", "토론 설명").optional()
+                            field("debateStatus", "토론방 상태")
+                            field("currentStage", "현재 진행 단계")
+                            field("myRole", "내 역할")
+                            field("myPosition", "내 포지션")
+                            field("opponent", "상대방 정보 (아직 매칭되지 않았으면 null)").optional()
+                            field("turnTimeSeconds", "턴당 발언 제한 시간")
+                            field("freeDebateTimeSeconds", "자유 토론 제한 시간")
+                            field("createdAt", "토론방 생성 시각")
+                        }
+                        field("nextCursor", "다음 페이지 커서").optional()
+                        field("hasNext", "다음 페이지 존재 여부")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `status를 여러 번 지정하면 해당 상태들을 모두 포함해 조회한다`() {
+        val myEmail = "my-debates-multi-status@pangyeori.com"
+        val myToken = issueAccessToken(
+            email = myEmail,
+            nickname = "다중상태조회자",
+        )
+        createDebate(
+            hostEmail = myEmail,
+            title = "대기 중인 토론",
+            description = "[다중상태] status=WAITING&status=READY 중 WAITING에 해당해 조회됩니다.",
+        )
+        val ready = createDebate(
+            hostEmail = myEmail,
+            title = "매칭된 토론",
+            description = "[다중상태] status=WAITING&status=READY 중 READY에 해당해 조회됩니다.",
+        )
+        val readyDebate = debateRepository.findById(ready.id).orElseThrow()
+        readyDebate.status = DebateStatus.READY
+        debateRepository.saveAndFlush(readyDebate)
+        val finished = createDebate(
+            hostEmail = myEmail,
+            title = "종료된 토론",
+            description = "[다중상태] status=WAITING&status=READY 어느 쪽에도 해당하지 않아 조회되지 않습니다.",
+        )
+        val finishedDebate = debateRepository.findById(finished.id).orElseThrow()
+        finishedDebate.status = DebateStatus.FINISHED
+        debateRepository.saveAndFlush(finishedDebate)
+
+        restDocs(mockMvc, "debates/get-my-list-multi-status") {
+            summary("내 토론방 목록 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/me")
+                header("Authorization", "Bearer $myToken")
+                queryParameters {
+                    param("status", "WAITING", "토론방 상태 필터. 같은 이름으로 여러 번 지정하면 해당 상태들을 모두 포함해 조회한다").optional()
+                    param("status", "READY", "토론방 상태 필터. 같은 이름으로 여러 번 지정하면 해당 상태들을 모두 포함해 조회한다").optional()
+                }
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "내 토론방 목록") {
+                        array("items", "토론방 목록") {
+                            field("debateId", "토론방 ID")
+                            field("title", "토론 주제")
+                            field("description", "토론 설명").optional()
+                            field("debateStatus", "토론방 상태")
+                            field("currentStage", "현재 진행 단계")
+                            field("myRole", "내 역할")
+                            field("myPosition", "내 포지션")
+                            field("opponent", "상대방 정보 (아직 매칭되지 않았으면 null)").optional()
+                            field("turnTimeSeconds", "턴당 발언 제한 시간")
+                            field("freeDebateTimeSeconds", "자유 토론 제한 시간")
+                            field("createdAt", "토론방 생성 시각")
+                        }
+                        field("nextCursor", "다음 페이지 커서").optional()
+                        field("hasNext", "다음 페이지 존재 여부")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `거절되거나 취소한 참여 요청 토론방은 목록에서 제외한다`() {
+        val myEmail = "my-debates-excluded@pangyeori.com"
+        val myToken = issueAccessToken(
+            email = myEmail,
+            nickname = "제외조회자",
+        )
+        val hostEmail = "my-debates-excluded-host@pangyeori.com"
+        issueAccessToken(
+            email = hostEmail,
+            nickname = "제외방장",
+        )
+        val selectedGuestEmail = "my-debates-excluded-selected@pangyeori.com"
+        issueAccessToken(
+            email = selectedGuestEmail,
+            nickname = "제외선택게스트",
+        )
+        val cancelled = createDebate(
+            hostEmail = hostEmail,
+            title = "참여를 취소할 토론",
+        )
+        debateParticipationService.requestParticipation(
+            debateId = cancelled.id,
+            userEmail = myEmail,
+        )
+        debateParticipationService.cancelParticipation(
+            debateId = cancelled.id,
+            userEmail = myEmail,
+        )
+        val rejected = createDebate(
+            hostEmail = hostEmail,
+            title = "거절될 토론",
+        )
+        debateParticipationService.requestParticipation(
+            debateId = rejected.id,
+            userEmail = myEmail,
+        )
+        joinAsGuest(
+            debateId = rejected.id,
+            hostEmail = hostEmail,
+            guestEmail = selectedGuestEmail,
+        )
+
+        restDocs(mockMvc, "debates/get-my-list-empty") {
+            summary("내 토론방 목록 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/me")
+                header("Authorization", "Bearer $myToken")
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "내 토론방 목록") {
+                        field("items", "토론방 목록")
+                        field("nextCursor", "다음 페이지 커서").optional()
+                        field("hasNext", "다음 페이지 존재 여부")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `아직 게스트로 선택되지 않은 참여 요청도 목록에 조회된다`() {
+        val myEmail = "my-debates-pending@pangyeori.com"
+        val myToken = issueAccessToken(
+            email = myEmail,
+            nickname = "대기조회자",
+        )
+        val hostEmail = "my-debates-pending-host@pangyeori.com"
+        issueAccessToken(
+            email = hostEmail,
+            nickname = "대기방장",
+        )
+        val pending = createDebate(
+            hostEmail = hostEmail,
+            title = "아직 선택되지 않은 토론",
+            description = "참여 요청은 보냈지만 호스트가 아직 게스트를 선택하지 않아도 목록에 조회됩니다.",
+        )
+        debateParticipationService.requestParticipation(
+            debateId = pending.id,
+            userEmail = myEmail,
+        )
+
+        restDocs(mockMvc, "debates/get-my-list-pending") {
+            summary("내 토론방 목록 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/me")
+                header("Authorization", "Bearer $myToken")
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "내 토론방 목록") {
+                        array("items", "토론방 목록") {
+                            field("debateId", "토론방 ID")
+                            field("title", "토론 주제")
+                            field("description", "토론 설명").optional()
+                            field("debateStatus", "토론방 상태")
+                            field("currentStage", "현재 진행 단계")
+                            field("myRole", "내 역할")
+                            field("myPosition", "내 포지션")
+                            obj("opponent", "상대방 정보") {
+                                field("userId", "상대방 사용자 ID")
+                                field("nickname", "상대방 닉네임")
+                                field("profileImageKey", "상대방 프로필 이미지 키").optional()
+                            }
+                            field("turnTimeSeconds", "턴당 발언 제한 시간")
+                            field("freeDebateTimeSeconds", "자유 토론 제한 시간")
+                            field("createdAt", "토론방 생성 시각")
+                        }
+                        field("nextCursor", "다음 페이지 커서").optional()
+                        field("hasNext", "다음 페이지 존재 여부")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `호스트 입장에서도 아직 게스트를 선택하지 않은 토론방이 목록에 조회된다`() {
+        val hostEmail = "my-debates-host-pending@pangyeori.com"
+        val hostToken = issueAccessToken(
+            email = hostEmail,
+            nickname = "대기방장",
+        )
+        val guestEmail = "my-debates-host-pending-guest@pangyeori.com"
+        issueAccessToken(
+            email = guestEmail,
+            nickname = "대기요청자",
+        )
+        val debate = createDebate(
+            hostEmail = hostEmail,
+            title = "아직 게스트를 선택하지 않은 토론",
+            description = "참여 요청이 들어왔지만 아직 게스트를 선택하지 않아도 개설자 목록에 조회됩니다.",
+        )
+        debateParticipationService.requestParticipation(
+            debateId = debate.id,
+            userEmail = guestEmail,
+        )
+
+        restDocs(mockMvc, "debates/get-my-list-host-pending") {
+            summary("내 토론방 목록 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/me")
+                header("Authorization", "Bearer $hostToken")
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "내 토론방 목록") {
+                        array("items", "토론방 목록") {
+                            field("debateId", "토론방 ID")
+                            field("title", "토론 주제")
+                            field("description", "토론 설명").optional()
+                            field("debateStatus", "토론방 상태")
+                            field("currentStage", "현재 진행 단계")
+                            field("myRole", "내 역할")
+                            field("myPosition", "내 포지션")
+                            field("opponent", "상대방 정보 (아직 게스트를 선택하지 않았으면 null)").optional()
+                            field("turnTimeSeconds", "턴당 발언 제한 시간")
+                            field("freeDebateTimeSeconds", "자유 토론 제한 시간")
+                            field("createdAt", "토론방 생성 시각")
+                        }
+                        field("nextCursor", "다음 페이지 커서").optional()
+                        field("hasNext", "다음 페이지 존재 여부")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `유효하지 않은 상태로 내 토론방 목록을 조회하면 400을 반환한다`() {
+        val accessToken = issueAccessToken(
+            email = "my-debates-invalid-status@pangyeori.com",
+            nickname = "잘못된상태조회자",
+        )
+
+        restDocs(mockMvc, "debates/get-my-list-invalid-status") {
+            summary("내 토론방 목록 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/me")
+                header("Authorization", "Bearer $accessToken")
+                queryParameters {
+                    param("status", "UNKNOWN", "유효하지 않은 토론방 상태")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
                         }
                     }
                 }
