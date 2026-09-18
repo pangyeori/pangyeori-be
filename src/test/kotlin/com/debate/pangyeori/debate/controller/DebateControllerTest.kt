@@ -1377,6 +1377,73 @@ class DebateControllerTest : RestDocsMvcTest() {
     }
 
     @Test
+    fun `status를 여러 번 지정하면 해당 상태들을 모두 포함해 조회한다`() {
+        val myEmail = "my-debates-multi-status@pangyeori.com"
+        val myToken = issueAccessToken(
+            email = myEmail,
+            nickname = "다중상태조회자",
+        )
+        createDebate(
+            hostEmail = myEmail,
+            title = "대기 중인 토론",
+            description = "[다중상태] status=WAITING&status=READY 중 WAITING에 해당해 조회됩니다.",
+        )
+        val ready = createDebate(
+            hostEmail = myEmail,
+            title = "매칭된 토론",
+            description = "[다중상태] status=WAITING&status=READY 중 READY에 해당해 조회됩니다.",
+        )
+        val readyDebate = debateRepository.findById(ready.id).orElseThrow()
+        readyDebate.status = DebateStatus.READY
+        debateRepository.saveAndFlush(readyDebate)
+        val finished = createDebate(
+            hostEmail = myEmail,
+            title = "종료된 토론",
+            description = "[다중상태] status=WAITING&status=READY 어느 쪽에도 해당하지 않아 조회되지 않습니다.",
+        )
+        val finishedDebate = debateRepository.findById(finished.id).orElseThrow()
+        finishedDebate.status = DebateStatus.FINISHED
+        debateRepository.saveAndFlush(finishedDebate)
+
+        restDocs(mockMvc, "debates/get-my-list-multi-status") {
+            summary("내 토론방 목록 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/me")
+                header("Authorization", "Bearer $myToken")
+                queryParameters {
+                    param("status", "WAITING", "토론방 상태 필터. 같은 이름으로 여러 번 지정하면 해당 상태들을 모두 포함해 조회한다").optional()
+                    param("status", "READY", "토론방 상태 필터. 같은 이름으로 여러 번 지정하면 해당 상태들을 모두 포함해 조회한다").optional()
+                }
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "내 토론방 목록") {
+                        array("items", "토론방 목록") {
+                            field("debateId", "토론방 ID")
+                            field("title", "토론 주제")
+                            field("description", "토론 설명").optional()
+                            field("debateStatus", "토론방 상태")
+                            field("currentStage", "현재 진행 단계")
+                            field("myRole", "내 역할")
+                            field("myPosition", "내 포지션")
+                            field("opponent", "상대방 정보 (아직 매칭되지 않았으면 null)").optional()
+                            field("turnTimeSeconds", "턴당 발언 제한 시간")
+                            field("freeDebateTimeSeconds", "자유 토론 제한 시간")
+                            field("createdAt", "토론방 생성 시각")
+                        }
+                        field("nextCursor", "다음 페이지 커서").optional()
+                        field("hasNext", "다음 페이지 존재 여부")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
     fun `거절되거나 취소한 참여 요청 토론방은 목록에서 제외한다`() {
         val myEmail = "my-debates-excluded@pangyeori.com"
         val myToken = issueAccessToken(

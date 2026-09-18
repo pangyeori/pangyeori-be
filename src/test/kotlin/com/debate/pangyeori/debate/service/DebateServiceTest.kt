@@ -248,7 +248,7 @@ class DebateServiceTest : BehaviorSpec({
                 every {
                     debateUserRepository.findAllParticipating(
                         userId = me.id!!,
-                        status = DebateStatus.READY,
+                        status = listOf(DebateStatus.READY),
                         role = DebateUserRole.GUEST,
                         keyword = "AI",
                         cursor = "0000000000020",
@@ -258,7 +258,7 @@ class DebateServiceTest : BehaviorSpec({
 
                 debateService.getMyDebates(
                     userEmail = email,
-                    status = DebateStatus.READY,
+                    status = listOf(DebateStatus.READY),
                     role = DebateUserRole.GUEST,
                     keyword = " AI ",
                     cursor = "0000000000020",
@@ -266,7 +266,7 @@ class DebateServiceTest : BehaviorSpec({
                 )
                 debateService.getMyDebates(
                     userEmail = email,
-                    status = DebateStatus.READY,
+                    status = listOf(DebateStatus.READY),
                     role = DebateUserRole.GUEST,
                     keyword = " AI ",
                     cursor = "0000000000020",
@@ -276,7 +276,7 @@ class DebateServiceTest : BehaviorSpec({
                 verify(exactly = 1) {
                     debateUserRepository.findAllParticipating(
                         userId = me.id!!,
-                        status = DebateStatus.READY,
+                        status = listOf(DebateStatus.READY),
                         role = DebateUserRole.GUEST,
                         keyword = "AI",
                         cursor = "0000000000020",
@@ -286,7 +286,7 @@ class DebateServiceTest : BehaviorSpec({
                 verify(exactly = 1) {
                     debateUserRepository.findAllParticipating(
                         userId = me.id!!,
-                        status = DebateStatus.READY,
+                        status = listOf(DebateStatus.READY),
                         role = DebateUserRole.GUEST,
                         keyword = "AI",
                         cursor = "0000000000020",

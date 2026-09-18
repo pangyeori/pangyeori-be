@@ -225,7 +225,7 @@ class DebateUserQueryRepositoryImplTest {
 
         val result = debateUserRepository.findAllParticipating(
             userId = me.id!!,
-            status = DebateStatus.READY,
+            status = listOf(DebateStatus.READY),
             role = null,
             keyword = null,
             cursor = null,
@@ -233,6 +233,43 @@ class DebateUserQueryRepositoryImplTest {
         )
 
         result.map { it.debate.id } shouldBe listOf(ready.id)
+    }
+
+    @Test
+    fun `토론방 상태를 여러 개 지정하면 해당 상태들을 모두 포함해 조회한다`() {
+        val me = createUser(
+            email = "query-repo-multi-status@pangyeori.com",
+            nickname = "다중상태필터조회자",
+        )
+        val waiting = createDebate(
+            hostEmail = me.email,
+            title = "대기 중인 토론",
+        )
+        val ready = createDebate(
+            hostEmail = me.email,
+            title = "매칭된 토론",
+        )
+        val readyDebate = debateRepository.findById(ready.id).orElseThrow()
+        readyDebate.status = DebateStatus.READY
+        debateRepository.saveAndFlush(readyDebate)
+        val finished = createDebate(
+            hostEmail = me.email,
+            title = "종료된 토론",
+        )
+        val finishedDebate = debateRepository.findById(finished.id).orElseThrow()
+        finishedDebate.status = DebateStatus.FINISHED
+        debateRepository.saveAndFlush(finishedDebate)
+
+        val result = debateUserRepository.findAllParticipating(
+            userId = me.id!!,
+            status = listOf(DebateStatus.WAITING, DebateStatus.READY),
+            role = null,
+            keyword = null,
+            cursor = null,
+            limit = 10,
+        )
+
+        result.map { it.debate.id } shouldBe listOf(ready.id, waiting.id)
     }
 
     @Test
