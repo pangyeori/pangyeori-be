@@ -4,6 +4,7 @@ import com.debate.pangyeori.auth.token.RefreshTokenCookieProvider
 import com.debate.pangyeori.common.dto.ApiResponse
 import com.debate.pangyeori.user.dto.request.NicknameDuplicateRequest
 import com.debate.pangyeori.user.dto.request.PasswordChangeRequest
+import com.debate.pangyeori.user.dto.request.PasswordVerifyRequest
 import com.debate.pangyeori.user.dto.request.UserCreateRequest
 import com.debate.pangyeori.user.dto.request.UserProfileUpdateRequest
 import com.debate.pangyeori.user.dto.response.NicknameDuplicateResponse
@@ -80,6 +81,19 @@ class UserController(
     ): ResponseEntity<Void> {
         userService.removeProfileImage(
             email = principal.name,
+        )
+
+        return ResponseEntity.noContent().build()
+    }
+
+    @PostMapping("/me/password/verify")
+    fun verifyPassword(
+        principal: Principal,
+        @RequestBody @Valid request: PasswordVerifyRequest,
+    ): ResponseEntity<Void> {
+        userService.verifyPassword(
+            email = principal.name,
+            currentPassword = request.currentPassword!!,
         )
 
         return ResponseEntity.noContent().build()

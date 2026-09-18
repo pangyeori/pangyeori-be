@@ -656,6 +656,247 @@ class UserControllerTest : RestDocsMvcTest() {
     }
 
     @Test
+    fun `현재 비밀번호를 확인한다`() {
+        val accessToken = issueAccessToken(
+            email = "verify-password-success@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/verify-password-success") {
+            summary("현재 비밀번호 확인")
+            tag("Users")
+            request {
+                post("/api/v1/users/me/password/verify")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("currentPassword", "password123!", "현재 비밀번호")
+                }
+            }
+            response {
+                status(204)
+            }
+        }
+    }
+
+    @Test
+    fun `확인할 비밀번호가 일치하지 않으면 422를 반환한다`() {
+        val accessToken = issueAccessToken(
+            email = "verify-password-mismatch@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/verify-password-mismatch") {
+            summary("현재 비밀번호 확인")
+            tag("Users")
+            request {
+                post("/api/v1/users/me/password/verify")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("currentPassword", "wrongPassword1!", "현재 비밀번호")
+                }
+            }
+            response {
+                status(422)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `확인할 비밀번호가 누락되면 400을 반환한다`() {
+        val accessToken = issueAccessToken(
+            email = "verify-password-missing@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/verify-password-missing") {
+            summary("현재 비밀번호 확인")
+            tag("Users")
+            request {
+                post("/api/v1/users/me/password/verify")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `확인할 비밀번호가 null이면 400을 반환한다`() {
+        val accessToken = issueAccessToken(
+            email = "verify-password-null@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/verify-password-null") {
+            summary("현재 비밀번호 확인")
+            tag("Users")
+            request {
+                post("/api/v1/users/me/password/verify")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("currentPassword", null, "현재 비밀번호")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `확인할 비밀번호가 비어 있으면 400을 반환한다`() {
+        val accessToken = issueAccessToken(
+            email = "verify-password-empty@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/verify-password-empty") {
+            summary("현재 비밀번호 확인")
+            tag("Users")
+            request {
+                post("/api/v1/users/me/password/verify")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("currentPassword", "", "현재 비밀번호")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `확인할 비밀번호가 공백이면 400을 반환한다`() {
+        val accessToken = issueAccessToken(
+            email = "verify-password-blank@pangyeori.com",
+        )
+
+        restDocs(mockMvc, "users/verify-password-blank") {
+            summary("현재 비밀번호 확인")
+            tag("Users")
+            request {
+                post("/api/v1/users/me/password/verify")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("currentPassword", "   ", "현재 비밀번호")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `인증 없이 비밀번호를 확인하면 401을 반환한다`() {
+        restDocs(mockMvc, "users/verify-password-unauthorized") {
+            summary("현재 비밀번호 확인")
+            tag("Users")
+            request {
+                post("/api/v1/users/me/password/verify")
+                body {
+                    field("currentPassword", "password123!", "현재 비밀번호")
+                }
+            }
+            response {
+                status(401)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `유효하지 않은 토큰으로 비밀번호를 확인하면 401을 반환한다`() {
+        restDocs(mockMvc, "users/verify-password-invalid-token") {
+            summary("현재 비밀번호 확인")
+            tag("Users")
+            request {
+                post("/api/v1/users/me/password/verify")
+                header("Authorization", "Bearer invalid-token")
+                body {
+                    field("currentPassword", "password123!", "현재 비밀번호")
+                }
+            }
+            response {
+                status(401)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun `비밀번호를 변경한다`() {
         val accessToken = issueAccessToken(
             email = "change-password@pangyeori.com",

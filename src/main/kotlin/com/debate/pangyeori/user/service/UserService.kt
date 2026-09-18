@@ -148,6 +148,20 @@ class UserService(
         }
     }
 
+    @Transactional(readOnly = true)
+    fun verifyPassword(
+        email: String,
+        currentPassword: String,
+    ) {
+        val user = findUser(
+            email = email,
+        )
+
+        if (!passwordEncoder.matches(currentPassword, user.password)) {
+            throw InvalidCurrentPasswordException()
+        }
+    }
+
     @Transactional
     fun changePassword(
         email: String,

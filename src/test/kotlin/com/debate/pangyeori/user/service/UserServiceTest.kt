@@ -506,6 +506,62 @@ class UserServiceTest : BehaviorSpec({
         }
     }
 
+    Given("로그인한 사용자가 현재 비밀번호를 확인할 때") {
+        When("현재 비밀번호가 일치하면") {
+            Then("사용자 정보와 refresh token을 변경하지 않는다") {
+                val user = activeUser()
+                every { userRepository.findByEmail(email = email) } returns user
+                every { passwordEncoder.matches(password, user.password) } returns true
+
+                userService.verifyPassword(
+                    email = email,
+                    currentPassword = password,
+                )
+
+                user.password shouldBe "encoded-password"
+                user.nickname shouldBe nickname
+                user.profileImageKey shouldBe null
+                verify(exactly = 1) { passwordEncoder.matches(password, "encoded-password") }
+                verify(exactly = 0) { passwordEncoder.encode(any()) }
+                verify(exactly = 0) { userRepository.save(any<User>()) }
+                verify { refreshTokenRepository wasNot Called }
+            }
+        }
+
+        When("현재 비밀번호가 일치하지 않으면") {
+            Then("InvalidCurrentPasswordException을 던진다") {
+                val user = activeUser()
+                every { userRepository.findByEmail(email = email) } returns user
+                every { passwordEncoder.matches(password, user.password) } returns false
+
+                shouldThrow<InvalidCurrentPasswordException> {
+                    userService.verifyPassword(
+                        email = email,
+                        currentPassword = password,
+                    )
+                }
+
+                user.password shouldBe "encoded-password"
+                verify { refreshTokenRepository wasNot Called }
+            }
+        }
+
+        When("사용자를 찾을 수 없으면") {
+            Then("UserNotFoundException을 던진다") {
+                every { userRepository.findByEmail(email = email) } returns null
+
+                shouldThrow<UserNotFoundException> {
+                    userService.verifyPassword(
+                        email = email,
+                        currentPassword = password,
+                    )
+                }
+
+                verify { passwordEncoder wasNot Called }
+            }
+        }
+    }
+
     Given("로그인한 사용자가 비밀번호를 변경할 때") {
         When("현재 비밀번호가 일치하지 않으면") {
             Then("InvalidCurrentPasswordException을 던진다") {
