@@ -76,6 +76,22 @@ class NotificationService(
         }
     }
 
+    @Transactional
+    fun deleteNotification(
+        userEmail: String,
+        notificationId: String,
+    ) {
+        val user = userRepository.findByEmail(
+            email = userEmail,
+        ) ?: throw UserNotFoundException()
+        val notification = notificationRepository.findByIdAndRecipientId(
+            id = notificationId,
+            recipientId = user.id!!,
+        ) ?: throw NotificationNotFoundException()
+
+        notificationRepository.delete(notification)
+    }
+
     @Transactional(readOnly = true)
     fun getUnreadCount(
         userEmail: String,

@@ -8,6 +8,7 @@ import com.debate.pangyeori.notification.dto.response.NotificationUnreadCountRes
 import com.debate.pangyeori.notification.service.NotificationService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -83,5 +84,18 @@ class NotificationController(
                 data = Unit,
             ),
         )
+    }
+
+    @DeleteMapping("/{notificationId}")
+    fun deleteNotification(
+        principal: Principal,
+        @PathVariable notificationId: String,
+    ): ResponseEntity<Void> {
+        notificationService.deleteNotification(
+            userEmail = principal.name,
+            notificationId = notificationId,
+        )
+
+        return ResponseEntity.noContent().build()
     }
 }
