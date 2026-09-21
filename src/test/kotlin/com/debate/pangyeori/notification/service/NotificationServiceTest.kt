@@ -194,6 +194,51 @@ class NotificationServiceTest : BehaviorSpec({
         }
     }
 
+    Given("알림 삭제를 요청하면") {
+        When("본인의 알림이면") {
+            Then("삭제한다") {
+                val target = notification(id = "0000000000008")
+
+                every { userRepository.findByEmail(email = me.email) } returns me
+                every {
+                    notificationRepository.findByIdAndRecipientId(
+                        id = target.id!!,
+                        recipientId = me.id!!,
+                    )
+                } returns target
+                every { notificationRepository.delete(target) } just runs
+
+                service.deleteNotification(
+                    userEmail = me.email,
+                    notificationId = target.id!!,
+                )
+
+                verify(exactly = 1) { notificationRepository.delete(target) }
+            }
+        }
+
+        When("본인의 알림이 아니거나 존재하지 않으면") {
+            Then("NotificationNotFoundException을 던지고 삭제하지 않는다") {
+                every { userRepository.findByEmail(email = me.email) } returns me
+                every {
+                    notificationRepository.findByIdAndRecipientId(
+                        id = "0000000000099",
+                        recipientId = me.id!!,
+                    )
+                } returns null
+
+                shouldThrow<NotificationNotFoundException> {
+                    service.deleteNotification(
+                        userEmail = me.email,
+                        notificationId = "0000000000099",
+                    )
+                }
+
+                verify(exactly = 0) { notificationRepository.delete(any()) }
+            }
+        }
+    }
+
     Given("읽지 않은 알림 개수 조회를 요청하면") {
         When("정상 조회되면") {
             Then("개수를 반환한다") {

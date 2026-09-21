@@ -397,4 +397,83 @@ class NotificationControllerTest : RestDocsMvcTest() {
             }
         }
     }
+
+    @Test
+    fun `알림을 삭제한다`() {
+        val email = "notification-delete@pangyeori.com"
+        val accessToken = issueAccessToken(
+            email = email,
+            nickname = "알림삭제자",
+        )
+        val me = userRepository.findByEmail(email = email)!!
+        val debate = createDebate(
+            hostEmail = email,
+            title = "알림 삭제 토론",
+        )
+        val notification = createNotification(
+            recipient = me,
+            debate = debate,
+        )
+
+        restDocs(mockMvc, "notifications/delete") {
+            summary("알림 삭제")
+            tag("Notifications")
+            request {
+                delete("/api/v1/notifications/{notificationId}")
+                header("Authorization", "Bearer $accessToken")
+                pathParameters {
+                    param("notificationId", notification.id!!, "알림 ID")
+                }
+            }
+            response {
+                status(204)
+            }
+        }
+    }
+
+    @Test
+    fun `본인 알림이 아니면 삭제 시 404를 반환한다`() {
+        val ownerEmail = "notification-delete-owner@pangyeori.com"
+        issueAccessToken(
+            email = ownerEmail,
+            nickname = "알림삭제소유자",
+        )
+        val strangerToken = issueAccessToken(
+            email = "notification-delete-stranger@pangyeori.com",
+            nickname = "알림삭제외부인",
+        )
+        val owner = userRepository.findByEmail(email = ownerEmail)!!
+        val debate = createDebate(
+            hostEmail = ownerEmail,
+            title = "알림 삭제 권한 검증 토론",
+        )
+        val notification = createNotification(
+            recipient = owner,
+            debate = debate,
+        )
+
+        restDocs(mockMvc, "notifications/delete-not-found") {
+            summary("알림 삭제")
+            tag("Notifications")
+            request {
+                delete("/api/v1/notifications/{notificationId}")
+                header("Authorization", "Bearer $strangerToken")
+                pathParameters {
+                    param("notificationId", notification.id!!, "알림 ID")
+                }
+            }
+            response {
+                status(404)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
 }
