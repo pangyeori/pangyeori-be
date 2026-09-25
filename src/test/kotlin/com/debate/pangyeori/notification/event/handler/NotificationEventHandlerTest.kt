@@ -8,6 +8,8 @@ import com.debate.pangyeori.debate.event.DebateGuestStatusChangedEvent
 import com.debate.pangyeori.debate.event.DebateQueueChangedEvent
 import com.debate.pangyeori.debate.event.DebateQueueChangedEvent.DebateQueueOperation
 import com.debate.pangyeori.debate.event.DebateStatusChangedEvent
+import com.debate.pangyeori.debate.exception.DebateNotFoundException
+import com.debate.pangyeori.debate.exception.UserNotFoundInQueueException
 import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.repository.DebateUserRepository
 import com.debate.pangyeori.notification.domain.Notification
@@ -19,6 +21,7 @@ import com.navercorp.fixturemonkey.FixtureMonkey
 import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
 import com.navercorp.fixturemonkey.kotlin.giveMeKotlinBuilder
 import io.kotest.assertions.throwables.shouldNotThrowAny
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
@@ -159,10 +162,10 @@ class NotificationEventHandlerTest : BehaviorSpec({
         }
 
         When("토론방을 찾을 수 없으면") {
-            Then("알림을 생성하지 않는다") {
+            Then("DebateNotFoundException을 던지고 알림을 생성하지 않는다") {
                 every { debateRepository.findById(DEBATE_ID) } returns Optional.empty()
 
-                shouldNotThrowAny {
+                shouldThrow<DebateNotFoundException> {
                     handler.handleGuestStatusChanged(
                         DebateGuestStatusChangedEvent(
                             debateId = DEBATE_ID,
@@ -178,7 +181,7 @@ class NotificationEventHandlerTest : BehaviorSpec({
         }
 
         When("대기열에서 요청자를 찾을 수 없으면") {
-            Then("알림을 생성하지 않는다") {
+            Then("UserNotFoundInQueueException을 던지고 알림을 생성하지 않는다") {
                 every { debateRepository.findById(DEBATE_ID) } returns Optional.of(debate(guestUser = guest))
                 every {
                     debateUserRepository.findByDebateIdAndUserId(
@@ -187,7 +190,7 @@ class NotificationEventHandlerTest : BehaviorSpec({
                     )
                 } returns null
 
-                shouldNotThrowAny {
+                shouldThrow<UserNotFoundInQueueException> {
                     handler.handleGuestStatusChanged(
                         DebateGuestStatusChangedEvent(
                             debateId = DEBATE_ID,
@@ -202,7 +205,7 @@ class NotificationEventHandlerTest : BehaviorSpec({
         }
 
         When("알림 저장 중 예외가 발생하면") {
-            Then("예외를 전파하지 않고 삼킨다") {
+            Then("예외를 삼키지 않고 그대로 전파한다") {
                 val targetDebate = debate(guestUser = guest)
                 val member = debateUser(guest)
 
@@ -215,7 +218,7 @@ class NotificationEventHandlerTest : BehaviorSpec({
                 } returns member
                 every { notificationRepository.save(any()) } throws IllegalStateException("DB 저장 실패")
 
-                shouldNotThrowAny {
+                shouldThrow<IllegalStateException> {
                     handler.handleGuestStatusChanged(
                         DebateGuestStatusChangedEvent(
                             debateId = DEBATE_ID,
@@ -311,10 +314,10 @@ class NotificationEventHandlerTest : BehaviorSpec({
         }
 
         When("토론방을 찾을 수 없으면") {
-            Then("알림을 생성하지 않는다") {
+            Then("DebateNotFoundException을 던지고 알림을 생성하지 않는다") {
                 every { debateRepository.findById(DEBATE_ID) } returns Optional.empty()
 
-                shouldNotThrowAny {
+                shouldThrow<DebateNotFoundException> {
                     handler.handleQueueChanged(
                         DebateQueueChangedEvent(
                             debateId = DEBATE_ID,
@@ -329,7 +332,7 @@ class NotificationEventHandlerTest : BehaviorSpec({
         }
 
         When("대기열에서 요청자를 찾을 수 없으면") {
-            Then("알림을 생성하지 않는다") {
+            Then("UserNotFoundInQueueException을 던지고 알림을 생성하지 않는다") {
                 every { debateRepository.findById(DEBATE_ID) } returns Optional.of(debate())
                 every {
                     debateUserRepository.findByDebateIdAndUserId(
@@ -338,7 +341,7 @@ class NotificationEventHandlerTest : BehaviorSpec({
                     )
                 } returns null
 
-                shouldNotThrowAny {
+                shouldThrow<UserNotFoundInQueueException> {
                     handler.handleQueueChanged(
                         DebateQueueChangedEvent(
                             debateId = DEBATE_ID,
@@ -457,10 +460,10 @@ class NotificationEventHandlerTest : BehaviorSpec({
         }
 
         When("토론방을 찾을 수 없으면") {
-            Then("알림을 생성하지 않는다") {
+            Then("DebateNotFoundException을 던지고 알림을 생성하지 않는다") {
                 every { debateRepository.findById(DEBATE_ID) } returns Optional.empty()
 
-                shouldNotThrowAny {
+                shouldThrow<DebateNotFoundException> {
                     handler.handleStatusChanged(
                         DebateStatusChangedEvent(
                             debateId = DEBATE_ID,
