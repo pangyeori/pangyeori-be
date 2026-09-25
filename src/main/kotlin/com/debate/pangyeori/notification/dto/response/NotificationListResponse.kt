@@ -2,6 +2,7 @@ package com.debate.pangyeori.notification.dto.response
 
 import com.debate.pangyeori.notification.domain.Notification
 import com.debate.pangyeori.notification.domain.enums.NotificationType
+import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.LocalDateTime
 
 data class NotificationListResponse(
@@ -9,6 +10,7 @@ data class NotificationListResponse(
     val debateId: String,
     val type: NotificationType,
     val message: String,
+    @get:JsonProperty("isRead")
     val isRead: Boolean,
     val createdAt: LocalDateTime,
 ) {
