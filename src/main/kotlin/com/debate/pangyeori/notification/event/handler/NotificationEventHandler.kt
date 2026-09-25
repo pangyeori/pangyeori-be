@@ -27,7 +27,7 @@ class NotificationEventHandler(
 ) {
     private val logger = KotlinLogging.logger {}
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     fun handleGuestStatusChanged(
         event: DebateGuestStatusChangedEvent,
     ) {
@@ -53,7 +53,7 @@ class NotificationEventHandler(
         }
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     fun handleQueueChanged(
         event: DebateQueueChangedEvent,
     ) {
@@ -80,7 +80,7 @@ class NotificationEventHandler(
         }
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     fun handleStatusChanged(
         event: DebateStatusChangedEvent,
     ) {
