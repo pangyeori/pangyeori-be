@@ -8,7 +8,10 @@ import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 import com.debate.pangyeori.debate.dto.response.DebateCreateResponse
 import com.debate.pangyeori.debate.dto.response.DebateListResponse
+import com.debate.pangyeori.debate.dto.response.DebateResponse
 import com.debate.pangyeori.debate.event.DebateCreatedEvent
+import com.debate.pangyeori.debate.exception.DebateAccessDeniedException
+import com.debate.pangyeori.debate.exception.DebateNotFoundException
 import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.repository.DebateUserRepository
 import com.debate.pangyeori.user.exception.UserNotFoundException
@@ -67,6 +70,26 @@ class DebateService(
 
         return DebateCreateResponse.from(
             debate = debate,
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun getDebate(
+        debateId: String,
+        userEmail: String,
+    ): DebateResponse {
+        val user = userRepository.findByEmail(
+            email = userEmail,
+        ) ?: throw UserNotFoundException()
+        val member = debateUserRepository.findByDebateIdAndUserId(
+            debateId = debateId,
+            userId = user.id!!,
+        ) ?: throw DebateAccessDeniedException()
+        val debate = debateRepository.findById(debateId).orElseThrow { DebateNotFoundException() }
+
+        return DebateResponse.from(
+            debate = debate,
+            isHost = member.role == DebateUserRole.HOST,
         )
     }
 

@@ -12,6 +12,7 @@ import com.debate.pangyeori.debate.dto.response.DebateCreateResponse
 import com.debate.pangyeori.debate.dto.response.DebateGuestAcceptResponse
 import com.debate.pangyeori.debate.dto.response.DebateListResponse
 import com.debate.pangyeori.debate.dto.response.DebateParticipationResponse
+import com.debate.pangyeori.debate.dto.response.DebateResponse
 import com.debate.pangyeori.debate.dto.response.DebateStatusResponse
 import com.debate.pangyeori.debate.service.DebateParticipationService
 import com.debate.pangyeori.debate.service.DebateService
@@ -50,6 +51,23 @@ class DebateController(
         )
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
+            ApiResponse.success(
+                data = response,
+            ),
+        )
+    }
+
+    @GetMapping("/{debateId}")
+    fun getDebate(
+        principal: Principal,
+        @PathVariable debateId: String,
+    ): ResponseEntity<ApiResponse<DebateResponse>> {
+        val response = debateService.getDebate(
+            debateId = debateId,
+            userEmail = principal.name,
+        )
+
+        return ResponseEntity.ok(
             ApiResponse.success(
                 data = response,
             ),

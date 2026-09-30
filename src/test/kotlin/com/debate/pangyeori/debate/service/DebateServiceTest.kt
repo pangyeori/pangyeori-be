@@ -7,6 +7,7 @@ import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 import com.debate.pangyeori.debate.domain.enums.DebateUserStatus
 import com.debate.pangyeori.debate.event.DebateCreatedEvent
+import com.debate.pangyeori.debate.exception.DebateAccessDeniedException
 import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.repository.DebateUserRepository
 import com.debate.pangyeori.support.fixture.setAuditFields
@@ -110,6 +111,117 @@ class DebateServiceTest : BehaviorSpec({
                         hostPosition = DebatePosition.CONS,
                         turnTimeSeconds = 180,
                         freeDebateTimeSeconds = 600,
+                    )
+                }
+            }
+        }
+    }
+
+    Given("토론방 단건 조회를 요청하면") {
+        val debateId = "0000000000030"
+        val hostEmail = "get-debate-host@pangyeori.com"
+        val host = fixtureMonkey.giveMeKotlinBuilder<User>()
+            .set(User::id, "0000000000031")
+            .set(User::email, hostEmail)
+            .sample()
+        val debate = fixtureMonkey.giveMeKotlinBuilder<Debate>()
+            .set(Debate::id, debateId)
+            .set(Debate::host, host)
+            .set(Debate::hostPosition, DebatePosition.PROS)
+            .set(Debate::status, DebateStatus.WAITING)
+            .set(Debate::inviteToken, "550e8400-e29b-41d4-a716-446655440000")
+            .sample()
+
+        When("개설자가 조회하면") {
+            Then("초대 토큰을 포함해 반환한다") {
+                val hostMember = fixtureMonkey.giveMeKotlinBuilder<DebateUser>()
+                    .set(DebateUser::debate, debate)
+                    .set(DebateUser::user, host)
+                    .set(DebateUser::role, DebateUserRole.HOST)
+                    .sample()
+
+                every { userRepository.findByEmail(email = hostEmail) } returns host
+                every {
+                    debateUserRepository.findByDebateIdAndUserId(
+                        debateId = debateId,
+                        userId = host.id!!,
+                    )
+                } returns hostMember
+                every { debateRepository.findById(debateId) } returns java.util.Optional.of(debate)
+
+                val response = debateService.getDebate(
+                    debateId = debateId,
+                    userEmail = hostEmail,
+                )
+
+                response.inviteToken shouldBe debate.inviteToken
+            }
+        }
+
+        When("참여자이지만 개설자가 아니면") {
+            Then("초대 토큰은 null로 반환한다") {
+                val guestEmail = "get-debate-guest@pangyeori.com"
+                val guest = fixtureMonkey.giveMeKotlinBuilder<User>()
+                    .set(User::id, "0000000000032")
+                    .set(User::email, guestEmail)
+                    .sample()
+                val guestMember = fixtureMonkey.giveMeKotlinBuilder<DebateUser>()
+                    .set(DebateUser::debate, debate)
+                    .set(DebateUser::user, guest)
+                    .set(DebateUser::role, DebateUserRole.GUEST)
+                    .sample()
+
+                every { userRepository.findByEmail(email = guestEmail) } returns guest
+                every {
+                    debateUserRepository.findByDebateIdAndUserId(
+                        debateId = debateId,
+                        userId = guest.id!!,
+                    )
+                } returns guestMember
+                every { debateRepository.findById(debateId) } returns java.util.Optional.of(debate)
+
+                val response = debateService.getDebate(
+                    debateId = debateId,
+                    userEmail = guestEmail,
+                )
+
+                response.inviteToken shouldBe null
+            }
+        }
+
+        When("참여 이력이 없는 사용자가 조회하면") {
+            Then("DebateAccessDeniedException을 던진다") {
+                val strangerEmail = "get-debate-stranger@pangyeori.com"
+                val stranger = fixtureMonkey.giveMeKotlinBuilder<User>()
+                    .set(User::id, "0000000000033")
+                    .set(User::email, strangerEmail)
+                    .sample()
+
+                every { userRepository.findByEmail(email = strangerEmail) } returns stranger
+                every {
+                    debateUserRepository.findByDebateIdAndUserId(
+                        debateId = debateId,
+                        userId = stranger.id!!,
+                    )
+                } returns null
+
+                shouldThrow<DebateAccessDeniedException> {
+                    debateService.getDebate(
+                        debateId = debateId,
+                        userEmail = strangerEmail,
+                    )
+                }
+            }
+        }
+
+        When("사용자가 존재하지 않으면") {
+            Then("UserNotFoundException을 던진다") {
+                every { userRepository.findByEmail(email = "missing@pangyeori.com") } returns null
+
+                shouldThrow<UserNotFoundException> {
+                    debateService.getDebate(
+                        debateId = debateId,
+                        userEmail = "missing@pangyeori.com",
                     )
                 }
             }
