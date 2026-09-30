@@ -143,6 +143,143 @@ class DebateControllerTest : RestDocsMvcTest() {
     }
 
     @Test
+    fun `개설자가 자신의 토론방을 조회하면 초대 토큰을 함께 받는다`() {
+        val hostEmail = "get-debate-host@pangyeori.com"
+        val accessToken = issueAccessToken(
+            email = hostEmail,
+            nickname = "토론방조회방장",
+        )
+        val debate = createDebate(
+            hostEmail = hostEmail,
+            title = "토론방 단건 조회 검증",
+            description = "토론방 단건 조회 설명",
+        )
+
+        restDocs(mockMvc, "debates/get") {
+            summary("토론방 단건 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/{debateId}")
+                header("Authorization", "Bearer $accessToken")
+                pathParameters {
+                    param("debateId", debate.id, "토론방 ID")
+                }
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "토론방 정보") {
+                        field("id", "토론방 ID")
+                        field("title", "토론 주제")
+                        field("description", "토론 설명").optional()
+                        field("hostPosition", "개설자 포지션")
+                        field("guestPosition", "게스트 포지션")
+                        field("status", "토론방 상태")
+                        field("turnTimeSeconds", "턴당 발언 제한 시간")
+                        field("freeDebateTimeSeconds", "자유 토론 제한 시간")
+                        field("inviteToken", "초대 토큰. 개설자 본인에게만 노출되고, 그 외에는 null").optional()
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `개설자가 아니면 토론방을 조회해도 초대 토큰을 받지 못한다`() {
+        val hostEmail = "get-debate-guest-host@pangyeori.com"
+        issueAccessToken(
+            email = hostEmail,
+            nickname = "토론방조회게스트방장",
+        )
+        val guestEmail = "get-debate-guest@pangyeori.com"
+        val guestToken = issueAccessToken(
+            email = guestEmail,
+            nickname = "토론방조회게스트",
+        )
+        val debate = createDebate(
+            hostEmail = hostEmail,
+            title = "토론방 단건 조회 게스트 검증",
+        )
+        debateParticipationService.requestParticipation(
+            debateId = debate.id,
+            userEmail = guestEmail,
+        )
+
+        restDocs(mockMvc, "debates/get-guest") {
+            summary("토론방 단건 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/{debateId}")
+                header("Authorization", "Bearer $guestToken")
+                pathParameters {
+                    param("debateId", debate.id, "토론방 ID")
+                }
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    obj("data", "토론방 정보") {
+                        field("id", "토론방 ID")
+                        field("title", "토론 주제")
+                        field("description", "토론 설명").optional()
+                        field("hostPosition", "개설자 포지션")
+                        field("guestPosition", "게스트 포지션")
+                        field("status", "토론방 상태")
+                        field("turnTimeSeconds", "턴당 발언 제한 시간")
+                        field("freeDebateTimeSeconds", "자유 토론 제한 시간")
+                        field("inviteToken", "초대 토큰. 개설자 본인에게만 노출되고, 그 외에는 null").optional()
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `참여 이력이 없는 사용자가 토론방을 조회하면 접근 권한 오류를 반환한다`() {
+        val hostEmail = "get-debate-denied-host@pangyeori.com"
+        issueAccessToken(
+            email = hostEmail,
+            nickname = "토론방조회거부방장",
+        )
+        val strangerToken = issueAccessToken(
+            email = "get-debate-denied-stranger@pangyeori.com",
+            nickname = "토론방조회타인",
+        )
+        val debate = createDebate(
+            hostEmail = hostEmail,
+            title = "토론방 단건 조회 접근 거부 검증",
+        )
+
+        restDocs(mockMvc, "debates/get-forbidden") {
+            summary("토론방 단건 조회")
+            tag("Debates")
+            request {
+                get("/api/v1/debates/{debateId}")
+                header("Authorization", "Bearer $strangerToken")
+                pathParameters {
+                    param("debateId", debate.id, "토론방 ID")
+                }
+            }
+            response {
+                status(403)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "오류 정보") {
+                        field("code", "오류 코드")
+                        field("message", "오류 메시지")
+                        field("details", "필드별 검증 오류 목록").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun `턴 시간이 허용 범위를 벗어나면 400을 반환한다`() {
         val email = "invalid-debate-host@pangyeori.com"
         val password = "password123!"
