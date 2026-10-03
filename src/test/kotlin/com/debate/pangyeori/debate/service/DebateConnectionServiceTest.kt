@@ -168,8 +168,9 @@ class DebateConnectionServiceTest : BehaviorSpec({
             Then("토론을 시작하지 않는다") {
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns
                     member(hostId, DebateUserRole.HOST)
-                every { presenceRepository.findActiveMembers(debateId) } returns listOf(
-                    Member(hostId, DebateUserRole.HOST, instanceId),
+                every { presenceRepository.findActiveMembers(debateId) } returnsMany listOf(
+                    emptyList(),
+                    listOf(Member(hostId, DebateUserRole.HOST, instanceId)),
                 )
 
                 service.enter(debateId, hostId, sessionId)
@@ -189,9 +190,12 @@ class DebateConnectionServiceTest : BehaviorSpec({
             Then("입장 이벤트만 발행하고 토론을 다시 시작하지 않는다") {
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns
                     member(hostId, DebateUserRole.HOST)
-                every { presenceRepository.findActiveMembers(debateId) } returns listOf(
-                    Member(hostId, DebateUserRole.HOST, instanceId),
-                    Member(guestId, DebateUserRole.GUEST, instanceId),
+                every { presenceRepository.findActiveMembers(debateId) } returnsMany listOf(
+                    listOf(Member(guestId, DebateUserRole.GUEST, instanceId)),
+                    listOf(
+                        Member(hostId, DebateUserRole.HOST, instanceId),
+                        Member(guestId, DebateUserRole.GUEST, instanceId),
+                    ),
                 )
                 every { debateRepository.findWithLockById(debateId) } returns readyDebate(DebateStatus.IN_PROGRESS)
 
@@ -234,7 +238,7 @@ class DebateConnectionServiceTest : BehaviorSpec({
         }
 
         When("재접속하여 다시 입장해 있으면") {
-            Then("끊김 횟수를 증가시키지 않는다") {
+            Then("다른 세션이 남아 있으면 이탈 처리와 끊김 횟수 증가를 하지 않는다") {
                 val hostMember = member(hostId, DebateUserRole.HOST)
                 every { presenceRepository.findDebateIdBySession(sessionId) } returns debateId
                 every { presenceRepository.find(debateId, sessionId) } returns Member(hostId, DebateUserRole.HOST, instanceId)
@@ -244,12 +248,37 @@ class DebateConnectionServiceTest : BehaviorSpec({
 
                 service.leave(sessionId)
 
-                val scheduled = slot<Runnable>()
-                verify(exactly = 1) { taskScheduler.schedule(capture(scheduled), any<Instant>()) }
-
-                scheduled.captured.run()
-
+                verify(exactly = 0) { taskScheduler.schedule(any<Runnable>(), any<Instant>()) }
                 hostMember.disconnectCount shouldBe 0
+            }
+        }
+    }
+
+    Given("같은 사용자의 다른 세션이 이미 방에 있을 때") {
+        When("새 세션이 입장하면") {
+            Then("입장 이벤트를 다시 발행하지 않는다") {
+                every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns member(hostId, DebateUserRole.HOST)
+                every { presenceRepository.findActiveMembers(debateId) } returns listOf(Member(hostId, DebateUserRole.HOST, instanceId))
+
+                service.enter(debateId, hostId, "session-2")
+
+                verify(exactly = 0) {
+                    roomEventPublisher.publish(match { it.type == DebateConnectionEvent.Type.ENTERED })
+                }
+            }
+        }
+
+        When("한 세션이 이탈해도 다른 세션이 남아 있으면") {
+            Then("이탈 이벤트를 발행하지 않는다") {
+                every { presenceRepository.findDebateIdBySession(sessionId) } returns debateId
+                every { presenceRepository.find(debateId, sessionId) } returns Member(hostId, DebateUserRole.HOST, instanceId)
+                every { presenceRepository.findActiveMembers(debateId) } returns listOf(Member(hostId, DebateUserRole.HOST, instanceId))
+
+                service.leave(sessionId)
+
+                verify(exactly = 0) {
+                    roomEventPublisher.publish(match { it.type == DebateConnectionEvent.Type.LEFT })
+                }
             }
         }
     }
