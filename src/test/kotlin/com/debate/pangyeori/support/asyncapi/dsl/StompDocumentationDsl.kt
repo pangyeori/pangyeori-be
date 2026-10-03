@@ -1,33 +1,31 @@
 package com.debate.pangyeori.support.asyncapi.dsl
 
 import com.debate.pangyeori.support.asyncapi.generator.AsyncApiDocumentStore
+import com.debate.pangyeori.support.asyncapi.generator.ChannelSnippet
 import com.debate.pangyeori.support.asyncapi.generator.DocumentedMessage
-import com.debate.pangyeori.support.asyncapi.generator.DocumentingSseClient
+import com.debate.pangyeori.support.asyncapi.generator.DocumentingStompClient
 import com.debate.pangyeori.support.asyncapi.generator.FieldDescriptor
 import com.debate.pangyeori.support.asyncapi.generator.SchemaBuilder
-import com.debate.pangyeori.support.asyncapi.generator.ChannelSnippet
 import com.debate.pangyeori.support.asyncapi.generator.parameterNamesFromPath
 import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 
 /**
- * `connect { }` 블록의 리시버.
+ * `connect { }` 블록의 리시버 (STOMP).
  *
- * SSE 스트림에 붙기 전에 테스트가 실행하는 준비 코드를 담는다. 보통 여기서 JWT를 발급하고
- * 스트림 티켓 발급 API를 호출한 뒤, 받은 티켓을 [query]로, 경로 변수 값을 [pathValue]로 넘긴다.
+ * CONNECT 프레임에 실을 헤더(예: `Authorization`)와 목적지 경로 변수 값([pathValue])을 지정한다.
  */
 @AsyncApiDocsDslMarker
-class SseConnectSpec internal constructor() {
+class StompConnectSpec internal constructor() {
 
-    internal val queryParams = linkedMapOf<String, String>()
+    internal val connectHeaders = linkedMapOf<String, String>()
     internal val pathValues = linkedMapOf<String, String>()
-    internal val requestHeaders = linkedMapOf<String, String>()
 
-    fun query(
+    fun header(
         name: String,
         value: String,
     ) {
-        queryParams[name] = value
+        connectHeaders[name] = value
     }
 
     fun pathValue(
@@ -36,26 +34,18 @@ class SseConnectSpec internal constructor() {
     ) {
         pathValues[name] = value
     }
-
-    fun header(
-        name: String,
-        value: String,
-    ) {
-        requestHeaders[name] = value
-    }
 }
 
 /**
- * `receive<T>(event, summary) { }` 블록의 리시버.
+ * `receive<T>(name, summary, example) { }` 블록의 리시버 (STOMP).
  *
- * 이 스트림이 보내는 이름 있는 이벤트 하나를 문서화한다. 필드를 [field]로 선언하고,
- * 서버 발행을 유도할 코드가 필요하면 [trigger]에 담고, 수신 payload 값을 [verify]로 검증한다.
- * 구독 직후 서버가 알아서 푸시하는 스냅샷 같은 이벤트는 [trigger] 없이 선언하면 된다.
+ * 구독한 목적지로 도착하는 메시지 하나를 문서화한다. [trigger]는 메시지 수신 전에 실행되어 서버 발행을 유도하고,
+ * [verify]는 역직렬화된 payload를 검증한다. 같은 타입의 메시지를 여러 번 받으면 [example]로 예시를 구분한다.
  */
 @AsyncApiDocsDslMarker
-class SseReceiveSpec<T : Any> internal constructor(
+class StompReceiveSpec<T : Any> internal constructor(
     internal val payloadType: Class<T>,
-    internal val eventName: String,
+    internal val messageName: String,
     internal val componentName: String,
     internal val summary: String?,
     internal val exampleLabel: String?,
@@ -84,16 +74,17 @@ class SseReceiveSpec<T : Any> internal constructor(
 }
 
 /**
- * `documentSse("resource/action") { ... }` 블록의 리시버.
+ * `documentStomp("resource/action", endpoint = ...) { ... }` 블록의 리시버.
  *
- * `channel(...)`과 `receive<T>(event) { }` 한 개 이상이 필수다. [execute]가 준비 → SSE 연결 →
- * (이벤트별 트리거) → 수신 → verify → field 대조 → 스니펫 생성/조립을 순서대로 수행하며,
- * `verify`나 field 대조가 실패하면 스니펫은 생성되지 않는다.
+ * [destination]으로 구독 목적지를 선언하고, [connect]로 CONNECT 헤더와 경로 변수를 지정한 뒤,
+ * [receive]를 선언한 순서대로 메시지를 받아 문서화한다. 구독은 [execute]에서 한 번만 맺고,
+ * 모든 receive가 같은 세션을 공유한다.
  */
 @AsyncApiDocsDslMarker
-class SseDocumentationDsl internal constructor(
+class StompDocumentationDsl internal constructor(
     private val identifier: String,
     private val baseUrl: String,
+    private val endpoint: String,
     private val objectMapper: ObjectMapper,
 ) {
 
@@ -102,16 +93,14 @@ class SseDocumentationDsl internal constructor(
 
     private var channelSpec: ChannelSpec? = null
     private val parameterSpecs = mutableListOf<ParameterSpec>()
-    private var connectBlock: (SseConnectSpec.() -> Unit)? = null
-    private val receiveSpecs = mutableListOf<SseReceiveSpec<*>>()
+    private var connectBlock: (StompConnectSpec.() -> Unit)? = null
+    private val receiveSpecs = mutableListOf<StompReceiveSpec<*>>()
 
-    fun channel(
-        path: String,
-        protocol: String,
+    fun destination(
+        subscribeTo: String,
         description: String,
-        name: String? = null,
     ) {
-        channelSpec = ChannelSpec(path, protocol, description, name)
+        channelSpec = ChannelSpec(subscribeTo, PROTOCOL, description)
     }
 
     fun parameter(
@@ -122,21 +111,21 @@ class SseDocumentationDsl internal constructor(
     }
 
     fun connect(
-        block: SseConnectSpec.() -> Unit,
+        block: StompConnectSpec.() -> Unit,
     ) {
         connectBlock = block
     }
 
     inline fun <reified T : Any> receive(
-        event: String,
+        name: String? = null,
         summary: String? = null,
         example: String? = null,
-        noinline block: SseReceiveSpec<T>.() -> Unit,
+        noinline block: StompReceiveSpec<T>.() -> Unit,
     ) {
         receiveInternal(
             payloadType = T::class.java,
-            eventName = event,
-            componentName = T::class.simpleName ?: "Event",
+            messageName = name ?: T::class.simpleName ?: "Message",
+            componentName = T::class.simpleName ?: "Message",
             summary = summary,
             example = example,
             block = block,
@@ -146,36 +135,39 @@ class SseDocumentationDsl internal constructor(
     @PublishedApi
     internal fun <T : Any> receiveInternal(
         payloadType: Class<T>,
-        eventName: String,
+        messageName: String,
         componentName: String,
         summary: String?,
         example: String?,
-        block: SseReceiveSpec<T>.() -> Unit,
+        block: StompReceiveSpec<T>.() -> Unit,
     ) {
-        receiveSpecs += SseReceiveSpec(payloadType, eventName, componentName, summary, example).apply(block)
+        receiveSpecs += StompReceiveSpec(payloadType, messageName, componentName, summary, example).apply(block)
     }
 
     @Suppress("UNCHECKED_CAST")
     internal fun execute() {
         val channel = channelSpec
-            ?: throw IllegalStateException("channel(...) 선언이 필요합니다")
+            ?: throw IllegalStateException("destination(...) 선언이 필요합니다")
         if (receiveSpecs.isEmpty()) {
-            throw IllegalStateException("receive<T>(event) { } 선언이 한 개 이상 필요합니다")
+            throw IllegalStateException("receive<T>() { } 선언이 한 개 이상 필요합니다")
         }
 
-        val connectSpec = SseConnectSpec()
+        val connectSpec = StompConnectSpec()
         connectBlock?.invoke(connectSpec)
-        val url = buildUrl(
+        val subscribeDestination = resolveDestination(
             path = channel.path,
             pathValues = connectSpec.pathValues,
-            queryParams = connectSpec.queryParams,
         )
 
-        val client = DocumentingSseClient(connectSpec.requestHeaders)
+        val client = DocumentingStompClient(
+            url = baseUrl.replaceFirst("http", "ws") + endpoint,
+            connectHeaders = connectSpec.connectHeaders,
+            destination = subscribeDestination,
+        )
         val messages = try {
-            client.connect(url)
-            (receiveSpecs as List<SseReceiveSpec<Any>>).map { spec ->
-                documentEvent(
+            client.connect()
+            (receiveSpecs as List<StompReceiveSpec<Any>>).map { spec ->
+                documentReceive(
                     client = client,
                     spec = spec,
                 )
@@ -186,7 +178,7 @@ class SseDocumentationDsl internal constructor(
 
         val fragment = ChannelSnippet(
             channelPath = channel.path,
-            explicitChannelName = channel.name,
+            explicitChannelName = null,
             channelDescription = channel.description,
             serverRef = AsyncApiDocumentStore.SERVER_REF,
             parameters = resolveParameters(
@@ -199,17 +191,14 @@ class SseDocumentationDsl internal constructor(
         store.assemble()
     }
 
-    private fun documentEvent(
-        client: DocumentingSseClient,
-        spec: SseReceiveSpec<Any>,
+    private fun documentReceive(
+        client: DocumentingStompClient,
+        spec: StompReceiveSpec<Any>,
     ): DocumentedMessage {
         spec.triggerBlock?.invoke()
-        val event = client.nextEventNamed(
-            name = spec.eventName,
-            timeout = EVENT_TIMEOUT,
-        )
+        val frame = client.nextFrame(RECEIVE_TIMEOUT)
 
-        val payload = objectMapper.readValue(event.data, spec.payloadType)
+        val payload = objectMapper.readValue(frame, spec.payloadType)
         spec.verifyBlock?.invoke(payload)
 
         val descriptors = spec.fields.map { field ->
@@ -219,24 +208,23 @@ class SseDocumentationDsl internal constructor(
                 optional = field.optional,
             )
         }
-        schemaBuilder.validate(descriptors, event.data)
+        schemaBuilder.validate(descriptors, frame)
 
         return DocumentedMessage(
-            messageKey = spec.eventName,
+            messageKey = spec.messageName,
             componentName = spec.componentName,
             summary = spec.summary,
-            payloadSchema = schemaBuilder.build(descriptors, event.data),
+            payloadSchema = schemaBuilder.build(descriptors, frame),
             exampleName = spec.exampleLabel ?: identifier.substringAfterLast('/'),
             examplePayload = readExample(
-                json = event.data,
+                json = frame,
             ),
         )
     }
 
-    private fun buildUrl(
+    private fun resolveDestination(
         path: String,
         pathValues: Map<String, String>,
-        queryParams: Map<String, String>,
     ): String {
         var resolved = path
         parameterNamesFromPath(path).forEach { name ->
@@ -244,12 +232,7 @@ class SseDocumentationDsl internal constructor(
                 ?: throw IllegalStateException("경로 변수 '$name' 값이 connect { pathValue(...) } 로 지정되지 않았습니다")
             resolved = resolved.replace("{$name}", value)
         }
-        val query = if (queryParams.isEmpty()) {
-            ""
-        } else {
-            "?" + queryParams.entries.joinToString("&") { (k, v) -> "$k=$v" }
-        }
-        return baseUrl + resolved + query
+        return resolved
     }
 
     private fun resolveParameters(
@@ -265,6 +248,7 @@ class SseDocumentationDsl internal constructor(
     ): Map<String, Any> = objectMapper.readValue(json, Map::class.java) as Map<String, Any>
 
     companion object {
-        private val EVENT_TIMEOUT: Duration = Duration.ofSeconds(10)
+        private const val PROTOCOL = "stomp"
+        private val RECEIVE_TIMEOUT: Duration = Duration.ofSeconds(10)
     }
 }
