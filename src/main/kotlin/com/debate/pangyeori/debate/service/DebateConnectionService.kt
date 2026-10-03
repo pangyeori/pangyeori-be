@@ -67,6 +67,7 @@ class DebateConnectionService(
         debateId: String,
         userId: String,
         sessionId: String,
+        subscriptionId: String,
     ) {
         val member = debateUserRepository.findByDebateIdAndUserId(
             debateId = debateId,
@@ -77,6 +78,7 @@ class DebateConnectionService(
         debatePresenceRedisRepository.save(
             debateId = debateId,
             sessionId = sessionId,
+            subscriptionId = subscriptionId,
             member = Member(
                 userId = userId,
                 role = member.role,
@@ -101,18 +103,31 @@ class DebateConnectionService(
         }
     }
 
-    fun leave(
+    fun leaveSubscription(
+        sessionId: String,
+        subscriptionId: String,
+    ) {
+        val debateId = debatePresenceRedisRepository.findDebateIdBySession(sessionId) ?: return
+        val member = debatePresenceRedisRepository.findBySession(debateId, sessionId).firstOrNull() ?: return
+        val sessionLeft = debatePresenceRedisRepository.removeSubscription(debateId, sessionId, subscriptionId)
+        if (sessionLeft) {
+            publishLeftIfUserGone(debateId, member)
+        }
+    }
+
+    fun leaveSession(
         sessionId: String,
     ) {
         val debateId = debatePresenceRedisRepository.findDebateIdBySession(sessionId) ?: return
-        val member = debatePresenceRedisRepository.find(
-            debateId = debateId,
-            sessionId = sessionId,
-        ) ?: return
-        debatePresenceRedisRepository.remove(
-            debateId = debateId,
-            sessionId = sessionId,
-        )
+        val member = debatePresenceRedisRepository.findBySession(debateId, sessionId).firstOrNull() ?: return
+        debatePresenceRedisRepository.removeSession(debateId, sessionId)
+        publishLeftIfUserGone(debateId, member)
+    }
+
+    private fun publishLeftIfUserGone(
+        debateId: String,
+        member: Member,
+    ) {
         if (debatePresenceRedisRepository.findActiveMembers(debateId).any { it.userId == member.userId }) {
             return
         }

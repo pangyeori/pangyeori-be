@@ -21,11 +21,13 @@ class DebateSessionListener(
         val debateId = DebateDestination.debateIdOf(accessor.destination) ?: return
         val userId = accessor.user?.name ?: return
         val sessionId = accessor.sessionId ?: return
+        val subscriptionId = accessor.subscriptionId ?: return
 
         debateConnectionService.enter(
             debateId = debateId,
             userId = userId,
             sessionId = sessionId,
+            subscriptionId = subscriptionId,
         )
     }
 
@@ -33,14 +35,16 @@ class DebateSessionListener(
     fun handleUnsubscribe(
         event: SessionUnsubscribeEvent,
     ) {
-        val sessionId = StompHeaderAccessor.wrap(event.message).sessionId ?: return
-        debateConnectionService.leave(sessionId)
+        val accessor = StompHeaderAccessor.wrap(event.message)
+        val sessionId = accessor.sessionId ?: return
+        val subscriptionId = accessor.subscriptionId ?: return
+        debateConnectionService.leaveSubscription(sessionId, subscriptionId)
     }
 
     @EventListener
     fun handleDisconnect(
         event: SessionDisconnectEvent,
     ) {
-        debateConnectionService.leave(event.sessionId)
+        debateConnectionService.leaveSession(event.sessionId)
     }
 }

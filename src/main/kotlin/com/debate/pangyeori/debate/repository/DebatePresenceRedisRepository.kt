@@ -12,20 +12,24 @@ class DebatePresenceRedisRepository(
     fun save(
         debateId: String,
         sessionId: String,
+        subscriptionId: String,
         member: Member,
     ) {
         val presenceKey = presenceKey(debateId)
-        redisTemplate.opsForHash<String, String>().put(presenceKey, sessionId, encode(member))
+        redisTemplate.opsForHash<String, String>()
+            .put(presenceKey, fieldKey(sessionId, subscriptionId), encode(member))
         redisTemplate.expire(presenceKey, PRESENCE_TTL)
         redisTemplate.opsForValue().set(sessionKey(sessionId), debateId, PRESENCE_TTL)
     }
 
-    fun find(
+    fun findBySession(
         debateId: String,
         sessionId: String,
-    ): Member? = redisTemplate.opsForHash<String, String>()
-        .get(presenceKey(debateId), sessionId)
-        ?.let { decode(it) }
+    ): List<Member> = redisTemplate.opsForHash<String, String>()
+        .entries(presenceKey(debateId))
+        .filterKeys { it.startsWith("$sessionId$FIELD_SEPARATOR") }
+        .values
+        .map { decode(it) }
 
     fun findDebateIdBySession(
         sessionId: String,
@@ -41,11 +45,31 @@ class DebatePresenceRedisRepository(
         return members.filter { it.instanceId in aliveInstances }
     }
 
-    fun remove(
+    fun removeSubscription(
+        debateId: String,
+        sessionId: String,
+        subscriptionId: String,
+    ): Boolean {
+        redisTemplate.opsForHash<String, String>().delete(presenceKey(debateId), fieldKey(sessionId, subscriptionId))
+        val sessionLeft = findBySession(debateId, sessionId).isEmpty()
+        if (sessionLeft) {
+            redisTemplate.delete(sessionKey(sessionId))
+        }
+        return sessionLeft
+    }
+
+    fun removeSession(
         debateId: String,
         sessionId: String,
     ) {
-        redisTemplate.opsForHash<String, String>().delete(presenceKey(debateId), sessionId)
+        val presenceKey = presenceKey(debateId)
+        val fields = redisTemplate.opsForHash<String, String>()
+            .entries(presenceKey)
+            .keys
+            .filter { it.startsWith("$sessionId$FIELD_SEPARATOR") }
+        if (fields.isNotEmpty()) {
+            redisTemplate.opsForHash<String, String>().delete(presenceKey, *fields.toTypedArray())
+        }
         redisTemplate.delete(sessionKey(sessionId))
     }
 
@@ -61,18 +85,23 @@ class DebatePresenceRedisRepository(
 
     private fun encode(
         member: Member,
-    ) = listOf(member.userId, member.role.code, member.instanceId).joinToString(DELIMITER)
+    ) = listOf(member.userId, member.role.code, member.instanceId).joinToString(VALUE_SEPARATOR)
 
     private fun decode(
         value: String,
     ): Member {
-        val (userId, role, instanceId) = value.split(DELIMITER, limit = 3)
+        val (userId, role, instanceId) = value.split(VALUE_SEPARATOR, limit = 3)
         return Member(
             userId = userId,
             role = DebateUserRole.fromCode(role),
             instanceId = instanceId,
         )
     }
+
+    private fun fieldKey(
+        sessionId: String,
+        subscriptionId: String,
+    ) = "$sessionId$FIELD_SEPARATOR$subscriptionId"
 
     private fun presenceKey(
         debateId: String,
@@ -96,7 +125,8 @@ class DebatePresenceRedisRepository(
         private const val KEY_PREFIX = "debate:"
         private const val SESSION_KEY_PREFIX = "debate:ws:session:"
         private const val INSTANCE_KEY_PREFIX = "debate:ws:instance:"
-        private const val DELIMITER = ":"
+        private const val VALUE_SEPARATOR = ":"
+        private const val FIELD_SEPARATOR = "/"
         private const val ALIVE = "alive"
         private val PRESENCE_TTL = Duration.ofHours(6)
         private val INSTANCE_TTL = Duration.ofSeconds(15)
