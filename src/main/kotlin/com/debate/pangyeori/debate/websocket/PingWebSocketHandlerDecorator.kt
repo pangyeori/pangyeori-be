@@ -11,8 +11,8 @@ import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.adapter.standard.StandardWebSocketSession
 import org.springframework.web.socket.handler.WebSocketHandlerDecorator
 import java.nio.ByteBuffer
+import java.time.Clock
 import java.time.Duration
-import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledFuture
 
@@ -23,7 +23,7 @@ class PingWebSocketHandlerDecorator(
 
     private val logger = KotlinLogging.logger {}
     private val pingTasks = ConcurrentHashMap<String, ScheduledFuture<*>>()
-    private val lastPongAt = ConcurrentHashMap<String, Instant>()
+    private val monitors = ConcurrentHashMap<String, PingMonitor>()
 
     override fun afterConnectionEstablished(
         session: WebSocketSession,
@@ -33,9 +33,10 @@ class PingWebSocketHandlerDecorator(
             ?.getNativeSession(Session::class.java)
             ?: return
 
-        lastPongAt[session.id] = Instant.now()
+        val monitor = PingMonitor(PONG_TIMEOUT, Clock.systemUTC())
+        monitors[session.id] = monitor
         pingTasks[session.id] = taskScheduler.scheduleAtFixedRate(
-            { sendPingOrClose(session, nativeSession) },
+            { sendPingOrClose(session, nativeSession, monitor) },
             PING_INTERVAL,
         )
     }
@@ -45,7 +46,7 @@ class PingWebSocketHandlerDecorator(
         message: WebSocketMessage<*>,
     ) {
         if (message is PongMessage) {
-            lastPongAt[session.id] = Instant.now()
+            monitors[session.id]?.recordPong()
             return
         }
         super.handleMessage(session, message)
@@ -56,16 +57,16 @@ class PingWebSocketHandlerDecorator(
         closeStatus: CloseStatus,
     ) {
         pingTasks.remove(session.id)?.cancel(false)
-        lastPongAt.remove(session.id)
+        monitors.remove(session.id)
         super.afterConnectionClosed(session, closeStatus)
     }
 
     private fun sendPingOrClose(
         session: WebSocketSession,
         nativeSession: Session,
+        monitor: PingMonitor,
     ) {
-        val lastPong = lastPongAt[session.id] ?: return
-        if (Duration.between(lastPong, Instant.now()) > PONG_TIMEOUT) {
+        if (monitor.isExpired()) {
             logger.warn { "pong 응답이 없어 연결을 닫습니다. sessionId=${session.id}" }
             runCatching { session.close(CloseStatus.SESSION_NOT_RELIABLE) }
             return
