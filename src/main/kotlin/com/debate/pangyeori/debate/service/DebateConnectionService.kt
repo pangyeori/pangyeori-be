@@ -13,6 +13,7 @@ import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.repository.DebatePresenceRedisRepository
 import com.debate.pangyeori.debate.repository.DebatePresenceRedisRepository.Member
 import com.debate.pangyeori.debate.repository.DebateUserRepository
+import com.debate.pangyeori.debate.websocket.DebateInstance
 import com.debate.pangyeori.debate.websocket.message.DebateConnectionEvent
 import com.debate.pangyeori.config.SchedulingConfig
 import com.debate.pangyeori.debate.websocket.publisher.RedisDebateConnectionEventPublisher
@@ -35,6 +36,7 @@ class DebateConnectionService(
     private val eventPublisher: ApplicationEventPublisher,
     @param:Qualifier(SchedulingConfig.DEBATE_CONNECTION_SCHEDULER) private val taskScheduler: TaskScheduler,
     private val transactionTemplate: TransactionTemplate,
+    private val debateInstance: DebateInstance,
 ) {
     private val logger = KotlinLogging.logger {}
 
@@ -70,12 +72,14 @@ class DebateConnectionService(
             debateId = debateId,
             userId = userId,
         ) ?: return
+        debatePresenceRedisRepository.refreshInstance(debateInstance.id)
         debatePresenceRedisRepository.save(
             debateId = debateId,
             sessionId = sessionId,
             member = Member(
                 userId = userId,
                 role = member.role,
+                instanceId = debateInstance.id,
             ),
         )
         debateConnectionEventPublisher.publish(
@@ -158,7 +162,7 @@ class DebateConnectionService(
         debateId: String,
         userId: String,
     ) {
-        if (debatePresenceRedisRepository.findMembers(debateId).any { it.userId == userId }) return
+        if (debatePresenceRedisRepository.findActiveMembers(debateId).any { it.userId == userId }) return
 
         transactionTemplate.executeWithoutResult {
             val debate = debateRepository.findById(debateId).orElse(null) ?: return@executeWithoutResult
@@ -175,7 +179,7 @@ class DebateConnectionService(
     private fun hasBothSides(
         debateId: String,
     ): Boolean {
-        val roles = debatePresenceRedisRepository.findMembers(debateId).map { it.role }.toSet()
+        val roles = debatePresenceRedisRepository.findActiveMembers(debateId).map { it.role }.toSet()
         return roles.containsAll(BOTH_SIDES)
     }
 

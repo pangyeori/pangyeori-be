@@ -31,11 +31,15 @@ class DebatePresenceRedisRepository(
         sessionId: String,
     ): String? = redisTemplate.opsForValue().get(sessionKey(sessionId))
 
-    fun findMembers(
+    fun findActiveMembers(
         debateId: String,
-    ): List<Member> = redisTemplate.opsForHash<String, String>()
-        .values(presenceKey(debateId))
-        .map { decode(it) }
+    ): List<Member> {
+        val members = redisTemplate.opsForHash<String, String>()
+            .values(presenceKey(debateId))
+            .map { decode(it) }
+        val aliveInstances = members.map { it.instanceId }.distinct().filter { isInstanceAlive(it) }.toSet()
+        return members.filter { it.instanceId in aliveInstances }
+    }
 
     fun remove(
         debateId: String,
@@ -45,17 +49,28 @@ class DebatePresenceRedisRepository(
         redisTemplate.delete(sessionKey(sessionId))
     }
 
+    fun refreshInstance(
+        instanceId: String,
+    ) {
+        redisTemplate.opsForValue().set(instanceKey(instanceId), ALIVE, INSTANCE_TTL)
+    }
+
+    private fun isInstanceAlive(
+        instanceId: String,
+    ): Boolean = redisTemplate.hasKey(instanceKey(instanceId)) == true
+
     private fun encode(
         member: Member,
-    ) = "${member.userId}$DELIMITER${member.role.code}"
+    ) = listOf(member.userId, member.role.code, member.instanceId).joinToString(DELIMITER)
 
     private fun decode(
         value: String,
     ): Member {
-        val (userId, role) = value.split(DELIMITER, limit = 2)
+        val (userId, role, instanceId) = value.split(DELIMITER, limit = 3)
         return Member(
             userId = userId,
             role = DebateUserRole.fromCode(role),
+            instanceId = instanceId,
         )
     }
 
@@ -67,15 +82,23 @@ class DebatePresenceRedisRepository(
         sessionId: String,
     ) = "$SESSION_KEY_PREFIX$sessionId"
 
+    private fun instanceKey(
+        instanceId: String,
+    ) = "$INSTANCE_KEY_PREFIX$instanceId"
+
     data class Member(
         val userId: String,
         val role: DebateUserRole,
+        val instanceId: String,
     )
 
     companion object {
         private const val KEY_PREFIX = "debate:"
         private const val SESSION_KEY_PREFIX = "debate:ws:session:"
+        private const val INSTANCE_KEY_PREFIX = "debate:ws:instance:"
         private const val DELIMITER = ":"
+        private const val ALIVE = "alive"
         private val PRESENCE_TTL = Duration.ofHours(6)
+        private val INSTANCE_TTL = Duration.ofSeconds(15)
     }
 }
