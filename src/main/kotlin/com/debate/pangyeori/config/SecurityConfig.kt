@@ -105,6 +105,7 @@ class SecurityConfig {
             "/docs/**",
             "/api/v1/users/nickname/duplicate",
             "/api/v1/debates/*/status/stream",
+            "/ws",
         )
 
         private val PUBLIC_POST_PATHS = arrayOf(

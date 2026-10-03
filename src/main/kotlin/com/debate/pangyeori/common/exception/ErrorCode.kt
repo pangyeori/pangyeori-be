@@ -21,6 +21,8 @@ enum class ErrorCode(
     USER_NOT_FOUND_IN_QUEUE(HttpStatus.NOT_FOUND, "대기열에서 사용자를 찾을 수 없습니다."),
     DEBATE_NOT_WAITING(HttpStatus.CONFLICT, "참여자를 선택할 수 있는 토론방 상태가 아닙니다."),
     DEBATE_STREAM_TICKET_INVALID(HttpStatus.UNAUTHORIZED, "유효하지 않거나 만료된 스트림 티켓입니다."),
+    DEBATE_NOT_READY(HttpStatus.CONFLICT, "입장할 수 있는 토론방 상태가 아닙니다."),
+    DEBATE_ALREADY_CONNECTED(HttpStatus.CONFLICT, "이미 다른 토론방에 접속 중입니다."),
 
     // 사용자
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),

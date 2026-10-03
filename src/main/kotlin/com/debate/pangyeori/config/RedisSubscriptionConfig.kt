@@ -2,6 +2,8 @@ package com.debate.pangyeori.config
 
 import com.debate.pangyeori.debate.stream.publisher.RedisDebateStreamPublisher
 import com.debate.pangyeori.debate.stream.subscriber.DebateStreamRedisSubscriber
+import com.debate.pangyeori.debate.websocket.publisher.RedisDebateConnectionEventPublisher
+import com.debate.pangyeori.debate.websocket.subscriber.DebateConnectionRedisSubscriber
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.redis.connection.RedisConnectionFactory
@@ -21,6 +23,20 @@ class RedisSubscriptionConfig {
         container.addMessageListener(
             debateStreamRedisSubscriber,
             ChannelTopic(RedisDebateStreamPublisher.CHANNEL),
+        )
+        return container
+    }
+
+    @Bean
+    fun debateConnectionListenerContainer(
+        connectionFactory: RedisConnectionFactory,
+        debateConnectionRedisSubscriber: DebateConnectionRedisSubscriber,
+    ): RedisMessageListenerContainer {
+        val container = RedisMessageListenerContainer()
+        container.setConnectionFactory(connectionFactory)
+        container.addMessageListener(
+            debateConnectionRedisSubscriber,
+            ChannelTopic(RedisDebateConnectionEventPublisher.CHANNEL),
         )
         return container
     }

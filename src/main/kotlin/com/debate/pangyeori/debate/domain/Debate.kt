@@ -46,7 +46,7 @@ class Debate private constructor(
     var status: DebateStatus,
 
     @Column(name = "current_stage", nullable = false, length = 30)
-    val currentStage: DebateStage,
+    var currentStage: DebateStage,
 
     @Column(name = "turn_time_seconds", nullable = false)
     val turnTimeSeconds: Int,
@@ -65,6 +65,11 @@ class Debate private constructor(
     ) {
         guest = selectedGuest
         status = DebateStatus.READY
+    }
+
+    fun start() {
+        status = DebateStatus.IN_PROGRESS
+        currentStage = DebateStage.OPENING_PROS
     }
 
     companion object {
