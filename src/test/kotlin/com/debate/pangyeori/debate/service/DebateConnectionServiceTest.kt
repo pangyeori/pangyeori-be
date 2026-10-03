@@ -15,6 +15,7 @@ import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.repository.DebatePresenceRedisRepository
 import com.debate.pangyeori.debate.repository.DebatePresenceRedisRepository.Member
 import com.debate.pangyeori.debate.repository.DebateUserRepository
+import com.debate.pangyeori.debate.websocket.DebateInstance
 import com.debate.pangyeori.debate.websocket.message.DebateConnectionEvent
 import com.debate.pangyeori.debate.websocket.publisher.RedisDebateConnectionEventPublisher
 import com.debate.pangyeori.user.domain.User
@@ -43,6 +44,7 @@ class DebateConnectionServiceTest : BehaviorSpec({
     val eventPublisher = mockk<ApplicationEventPublisher>(relaxed = true)
     val roomEventPublisher = mockk<RedisDebateConnectionEventPublisher>(relaxed = true)
     val taskScheduler = mockk<TaskScheduler>(relaxed = true)
+    val debateInstance = mockk<DebateInstance>(relaxed = true)
     val service = DebateConnectionService(
         debateRepository = debateRepository,
         debateUserRepository = debateUserRepository,
@@ -51,6 +53,7 @@ class DebateConnectionServiceTest : BehaviorSpec({
         eventPublisher = eventPublisher,
         taskScheduler = taskScheduler,
         transactionTemplate = TransactionTemplate(mockk<PlatformTransactionManager>(relaxed = true)),
+        debateInstance = debateInstance,
     )
     val fixtureMonkey = FixtureMonkey.builder()
         .plugin(KotlinPlugin())
@@ -60,6 +63,7 @@ class DebateConnectionServiceTest : BehaviorSpec({
     val hostId = "0000000000002"
     val guestId = "0000000000003"
     val sessionId = "session-1"
+    val instanceId = "instance-1"
 
     beforeEach {
         clearMocks(
@@ -143,9 +147,9 @@ class DebateConnectionServiceTest : BehaviorSpec({
                 val debate = readyDebate()
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, guestId) } returns
                     member(guestId, DebateUserRole.GUEST)
-                every { presenceRepository.findMembers(debateId) } returns listOf(
-                    Member(hostId, DebateUserRole.HOST),
-                    Member(guestId, DebateUserRole.GUEST),
+                every { presenceRepository.findActiveMembers(debateId) } returns listOf(
+                    Member(hostId, DebateUserRole.HOST, instanceId),
+                    Member(guestId, DebateUserRole.GUEST, instanceId),
                 )
                 every { debateRepository.findWithLockById(debateId) } returns debate
 
@@ -164,8 +168,8 @@ class DebateConnectionServiceTest : BehaviorSpec({
             Then("토론을 시작하지 않는다") {
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns
                     member(hostId, DebateUserRole.HOST)
-                every { presenceRepository.findMembers(debateId) } returns listOf(
-                    Member(hostId, DebateUserRole.HOST),
+                every { presenceRepository.findActiveMembers(debateId) } returns listOf(
+                    Member(hostId, DebateUserRole.HOST, instanceId),
                 )
 
                 service.enter(debateId, hostId, sessionId)
@@ -185,9 +189,9 @@ class DebateConnectionServiceTest : BehaviorSpec({
             Then("입장 이벤트만 발행하고 토론을 다시 시작하지 않는다") {
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns
                     member(hostId, DebateUserRole.HOST)
-                every { presenceRepository.findMembers(debateId) } returns listOf(
-                    Member(hostId, DebateUserRole.HOST),
-                    Member(guestId, DebateUserRole.GUEST),
+                every { presenceRepository.findActiveMembers(debateId) } returns listOf(
+                    Member(hostId, DebateUserRole.HOST, instanceId),
+                    Member(guestId, DebateUserRole.GUEST, instanceId),
                 )
                 every { debateRepository.findWithLockById(debateId) } returns readyDebate(DebateStatus.IN_PROGRESS)
 
@@ -208,10 +212,10 @@ class DebateConnectionServiceTest : BehaviorSpec({
             Then("이탈 이벤트를 발행하고 재접속 유예 후 끊김 횟수를 증가시킨다") {
                 val hostMember = member(hostId, DebateUserRole.HOST)
                 every { presenceRepository.findDebateIdBySession(sessionId) } returns debateId
-                every { presenceRepository.find(debateId, sessionId) } returns Member(hostId, DebateUserRole.HOST)
+                every { presenceRepository.find(debateId, sessionId) } returns Member(hostId, DebateUserRole.HOST, instanceId)
                 every { debateRepository.findById(debateId) } returns Optional.of(readyDebate())
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns hostMember
-                every { presenceRepository.findMembers(debateId) } returns emptyList()
+                every { presenceRepository.findActiveMembers(debateId) } returns emptyList()
 
                 service.leave(sessionId)
 
@@ -233,10 +237,10 @@ class DebateConnectionServiceTest : BehaviorSpec({
             Then("끊김 횟수를 증가시키지 않는다") {
                 val hostMember = member(hostId, DebateUserRole.HOST)
                 every { presenceRepository.findDebateIdBySession(sessionId) } returns debateId
-                every { presenceRepository.find(debateId, sessionId) } returns Member(hostId, DebateUserRole.HOST)
+                every { presenceRepository.find(debateId, sessionId) } returns Member(hostId, DebateUserRole.HOST, instanceId)
                 every { debateRepository.findById(debateId) } returns Optional.of(readyDebate())
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns hostMember
-                every { presenceRepository.findMembers(debateId) } returns listOf(Member(hostId, DebateUserRole.HOST))
+                every { presenceRepository.findActiveMembers(debateId) } returns listOf(Member(hostId, DebateUserRole.HOST, instanceId))
 
                 service.leave(sessionId)
 
