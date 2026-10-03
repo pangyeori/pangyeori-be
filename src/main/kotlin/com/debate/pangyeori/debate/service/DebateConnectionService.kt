@@ -72,6 +72,7 @@ class DebateConnectionService(
             debateId = debateId,
             userId = userId,
         ) ?: return
+        val userAlreadyPresent = debatePresenceRedisRepository.findActiveMembers(debateId).any { it.userId == userId }
         debatePresenceRedisRepository.refreshInstance(debateInstance.id)
         debatePresenceRedisRepository.save(
             debateId = debateId,
@@ -82,14 +83,16 @@ class DebateConnectionService(
                 instanceId = debateInstance.id,
             ),
         )
-        debateConnectionEventPublisher.publish(
-            DebateConnectionEvent(
-                debateId = debateId,
-                type = DebateConnectionEvent.Type.ENTERED,
-                role = member.role,
-            ),
-        )
-        logger.info { "토론방에 입장했습니다. debateId=$debateId, userId=$userId" }
+        if (!userAlreadyPresent) {
+            debateConnectionEventPublisher.publish(
+                DebateConnectionEvent(
+                    debateId = debateId,
+                    type = DebateConnectionEvent.Type.ENTERED,
+                    role = member.role,
+                ),
+            )
+            logger.info { "토론방에 입장했습니다. debateId=$debateId, userId=$userId" }
+        }
 
         if (hasBothSides(debateId)) {
             transactionTemplate.executeWithoutResult {
@@ -110,6 +113,9 @@ class DebateConnectionService(
             debateId = debateId,
             sessionId = sessionId,
         )
+        if (debatePresenceRedisRepository.findActiveMembers(debateId).any { it.userId == member.userId }) {
+            return
+        }
         debateConnectionEventPublisher.publish(
             DebateConnectionEvent(
                 debateId = debateId,
