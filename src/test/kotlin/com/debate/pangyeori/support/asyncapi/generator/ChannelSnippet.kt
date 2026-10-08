@@ -1,12 +1,12 @@
 package com.debate.pangyeori.support.asyncapi.generator
 
 /**
- * SSE 채널 하나에 대한 스니펫.
+ * SSE와 STOMP 등 채널 하나에 대한 스니펫.
  *
  * 한 스트림이 이름 있는 이벤트를 여러 종류 실어 나르므로, 채널 하나에 메시지 N개를 인라인으로 걸고
  * `receive` operation도 N개를 만든다. 공유 `components`는 만들지 않아 조각 간 병합 충돌이 없다.
  */
-internal class SseSnippet(
+internal class ChannelSnippet(
     private val channelPath: String,
     private val explicitChannelName: String?,
     private val channelDescription: String,

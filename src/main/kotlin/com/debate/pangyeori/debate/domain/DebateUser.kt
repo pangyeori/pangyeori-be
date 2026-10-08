@@ -45,7 +45,7 @@ class DebateUser private constructor(
     var status: DebateUserStatus,
 
     @Column(name = "disconnect_count", nullable = false)
-    val disconnectCount: Int,
+    var disconnectCount: Int,
 
     @Column(name = "joined_at")
     var joinedAt: LocalDateTime?,
@@ -61,6 +61,10 @@ class DebateUser private constructor(
 
     fun cancel() {
         status = DebateUserStatus.CANCELLED
+    }
+
+    fun increaseDisconnectCount() {
+        disconnectCount++
     }
 
     companion object {

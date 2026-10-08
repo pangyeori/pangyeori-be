@@ -1,6 +1,7 @@
 package com.debate.pangyeori.support.asyncapi
 
 import com.debate.pangyeori.support.asyncapi.dsl.SseDocumentationDsl
+import com.debate.pangyeori.support.asyncapi.dsl.StompDocumentationDsl
 import com.debate.pangyeori.support.containers.TestContainersInitializer
 import org.junit.jupiter.api.AfterEach
 import org.springframework.beans.factory.annotation.Autowired
@@ -50,6 +51,19 @@ abstract class AsyncApiDocsTest {
         SseDocumentationDsl(
             identifier = identifier,
             baseUrl = "http://localhost:$port",
+            objectMapper = objectMapper,
+        ).apply(block).execute()
+    }
+
+    protected fun documentStomp(
+        identifier: String,
+        endpoint: String,
+        block: StompDocumentationDsl.() -> Unit,
+    ) {
+        StompDocumentationDsl(
+            identifier = identifier,
+            baseUrl = "http://localhost:$port",
+            endpoint = endpoint,
             objectMapper = objectMapper,
         ).apply(block).execute()
     }
