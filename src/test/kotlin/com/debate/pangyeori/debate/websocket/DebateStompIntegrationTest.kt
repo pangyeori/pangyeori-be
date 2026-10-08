@@ -56,7 +56,8 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
         documentStomp("debates/roomEvents", endpoint = WebSocketConfig.ENDPOINT) {
             destination(
                 subscribeTo = DebateDestination.of("{debateId}"),
-                description = "토론방 입장, 이탈, 시작 이벤트",
+                description = "토론방 입장, 이탈, 시작 이벤트. 먼저 STOMP WebSocket으로 연결한 뒤 이 목적지를 구독한다. " +
+                    "클라이언트는 이 채널에 메시지를 보내지 않고 구독만 한다",
             )
             parameter("debateId", "토론방 ID")
             connect {
@@ -69,7 +70,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
             ) {
                 field("debateId", "토론방 ID")
                 field("type", "이벤트 종류 (ENTERED, LEFT, STARTED)")
-                field("role", "입장 또는 이탈한 참여자의 역할")
+                field("role", "입장 또는 이탈한 참여자의 역할 (시작 이벤트에는 없음)").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.ENTERED
                     it.role shouldBe DebateUserRole.HOST
@@ -82,7 +83,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 trigger { connectAsSubscriber(guest, debateId) }
                 field("debateId", "토론방 ID")
                 field("type", "이벤트 종류 (ENTERED, LEFT, STARTED)")
-                field("role", "입장 또는 이탈한 참여자의 역할")
+                field("role", "입장 또는 이탈한 참여자의 역할 (시작 이벤트에는 없음)").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.ENTERED
                     it.role shouldBe DebateUserRole.GUEST

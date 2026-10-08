@@ -180,7 +180,7 @@ class StompDocumentationDsl internal constructor(
             channelPath = channel.path,
             explicitChannelName = null,
             channelDescription = channel.description,
-            serverRef = AsyncApiDocumentStore.SERVER_REF,
+            serverRef = AsyncApiDocumentStore.WS_SERVER_REF,
             parameters = resolveParameters(
                 path = channel.path,
             ),

@@ -56,8 +56,15 @@ internal class AsyncApiDocumentStore(
         ),
         "servers" to linkedMapOf<String, Any>(
             SERVER_NAME to linkedMapOf<String, Any>(
-                "host" to SERVER_HOST,
+                "host" to PRODUCTION_HOST,
                 "protocol" to SERVER_PROTOCOL,
+                "description" to "REST API와 SSE 상태 스트림이 올라가는 서버",
+            ),
+            WS_SERVER_NAME to linkedMapOf<String, Any>(
+                "host" to PRODUCTION_HOST,
+                "protocol" to WS_SERVER_PROTOCOL,
+                "pathname" to WS_SERVER_PATHNAME,
+                "description" to "STOMP WebSocket 연결 엔드포인트. CONNECT 프레임의 Authorization 헤더에 Bearer 액세스 토큰을 실어 인증한다",
             ),
         ),
     )
@@ -90,16 +97,20 @@ internal class AsyncApiDocumentStore(
     }
 
     companion object {
-        private const val SERVER_NAME = "production"
+        private const val SERVER_NAME = "sse"
+        private const val WS_SERVER_NAME = "stomp"
 
         internal const val SERVER_REF = "#/servers/$SERVER_NAME"
+        internal const val WS_SERVER_REF = "#/servers/$WS_SERVER_NAME"
 
         private const val SNIPPETS_DIR = "build/asyncapi-snippets"
         private const val OUTPUT_PATH = "build/asyncapi/asyncapi.json"
         private const val ASYNCAPI_VERSION = "3.0.0"
         private const val DOC_TITLE = "Pangyeori AsyncAPI"
         private const val DOC_VERSION = "0.0.1"
-        private const val SERVER_HOST = "localhost:8080"
+        private const val PRODUCTION_HOST = "api.pangyeori.com"
         private const val SERVER_PROTOCOL = "https"
+        private const val WS_SERVER_PROTOCOL = "wss"
+        private const val WS_SERVER_PATHNAME = "/ws"
     }
 }
