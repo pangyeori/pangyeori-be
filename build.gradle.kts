@@ -24,7 +24,7 @@ val snippetsDir = file("build/generated-snippets")
 
 openapi3 {
     setServer("http://localhost:8080")
-    title = "REST Docs Kotlin DSL API"
+    title = "Pangyeori REST API"
     version = "0.0.1"
     format = "yaml"
     outputFileNamePrefix = "openapi3"
