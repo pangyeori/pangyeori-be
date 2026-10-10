@@ -3,6 +3,7 @@ package com.debate.pangyeori.debate.service
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 import com.debate.pangyeori.debate.domain.enums.DebateUserStatus
+import com.debate.pangyeori.debate.event.DebateStageChangedEvent
 import com.debate.pangyeori.debate.event.DebateStartedEvent
 import com.debate.pangyeori.debate.event.DebateStatusChangedEvent
 import com.debate.pangyeori.debate.exception.DebateAccessDeniedException
@@ -164,6 +165,13 @@ class DebateConnectionService(
         eventPublisher.publishEvent(
             DebateStartedEvent(
                 debateId = debateId,
+            ),
+        )
+        eventPublisher.publishEvent(
+            DebateStageChangedEvent(
+                debateId = debateId,
+                stage = debate.currentStage,
+                turnEndsAt = debate.currentTurnEndsAt(),
             ),
         )
         logger.info { "토론을 시작했습니다. debateId=$debateId" }
