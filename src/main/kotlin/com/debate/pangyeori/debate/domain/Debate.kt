@@ -7,6 +7,8 @@ import io.hypersistence.utils.hibernate.id.Tsid
 import jakarta.persistence.*
 import org.hibernate.annotations.SQLDelete
 import org.hibernate.annotations.SQLRestriction
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 @Entity
 @Table(
@@ -48,6 +50,9 @@ class Debate private constructor(
     @Column(name = "current_stage", nullable = false, length = 30)
     var currentStage: DebateStage,
 
+    @Column(name = "current_stage_started_at")
+    var currentStageStartedAt: LocalDateTime? = null,
+
     @Column(name = "turn_time_seconds", nullable = false)
     val turnTimeSeconds: Int,
 
@@ -70,7 +75,17 @@ class Debate private constructor(
     fun start() {
         status = DebateStatus.IN_PROGRESS
         currentStage = DebateStage.OPENING_PROS
+        currentStageStartedAt = LocalDateTime.now(ZoneOffset.UTC)
     }
+
+    fun advanceStage(
+        next: DebateStage,
+    ) {
+        currentStage = next
+        currentStageStartedAt = LocalDateTime.now(ZoneOffset.UTC)
+    }
+
+    fun currentTurnEndsAt(): LocalDateTime? = currentStageStartedAt?.plusSeconds(turnTimeSeconds.toLong())
 
     companion object {
         fun create(
