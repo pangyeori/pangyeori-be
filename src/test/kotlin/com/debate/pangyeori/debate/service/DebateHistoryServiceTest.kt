@@ -91,7 +91,14 @@ class DebateHistoryServiceTest : BehaviorSpec({
                     member(DebatePosition.PROS, DebateUserRole.HOST)
                 every { debateHistoryRepository.findByDebateIdAndStage(debateId, DebateStage.OPENING_PROS) } returns null
                 every { debateHistoryRepository.save(any()) } answers {
-                    setAuditFields(fixtureMonkey.giveMeKotlinBuilder<DebateHistory>().set(DebateHistory::id, "0000000000099").sample())
+                    setAuditFields(
+                        fixtureMonkey.giveMeKotlinBuilder<DebateHistory>()
+                            .set(DebateHistory::id, "0000000000099")
+                            .set(DebateHistory::stage, DebateStage.OPENING_PROS)
+                            .set(DebateHistory::content, "저는 찬성합니다")
+                            .sample(),
+                        createdAt = now,
+                    )
                 }
 
                 service.submit(debateId, hostEmail, "저는 찬성합니다")
@@ -99,7 +106,7 @@ class DebateHistoryServiceTest : BehaviorSpec({
                 target.currentStage shouldBe DebateStage.OPENING_CONS
                 verify(exactly = 1) {
                     eventPublisher.publishEvent(
-                        DebateHistoryRecordedEvent(debateId, DebateStage.OPENING_PROS, DebateUserRole.HOST, "저는 찬성합니다"),
+                        DebateHistoryRecordedEvent(debateId, DebateStage.OPENING_PROS, DebateUserRole.HOST, "저는 찬성합니다", now),
                     )
                 }
                 verify(exactly = 1) {
@@ -165,7 +172,14 @@ class DebateHistoryServiceTest : BehaviorSpec({
                 every { debateUserRepository.findByDebateIdAndPosition(debateId, DebatePosition.PROS) } returns
                     member(DebatePosition.PROS, DebateUserRole.HOST)
                 every { debateHistoryRepository.save(any()) } answers {
-                    setAuditFields(fixtureMonkey.giveMeKotlinBuilder<DebateHistory>().set(DebateHistory::id, "0000000000099").sample())
+                    setAuditFields(
+                        fixtureMonkey.giveMeKotlinBuilder<DebateHistory>()
+                            .set(DebateHistory::id, "0000000000099")
+                            .set(DebateHistory::stage, DebateStage.OPENING_PROS)
+                            .set(DebateHistory::content, null)
+                            .sample(),
+                        createdAt = now,
+                    )
                 }
 
                 service.forceAdvanceIfOverdue(debateId)
@@ -173,7 +187,7 @@ class DebateHistoryServiceTest : BehaviorSpec({
                 target.currentStage shouldBe DebateStage.OPENING_CONS
                 verify(exactly = 1) {
                     eventPublisher.publishEvent(
-                        DebateHistoryRecordedEvent(debateId, DebateStage.OPENING_PROS, DebateUserRole.HOST, null),
+                        DebateHistoryRecordedEvent(debateId, DebateStage.OPENING_PROS, DebateUserRole.HOST, null, now),
                     )
                 }
             }

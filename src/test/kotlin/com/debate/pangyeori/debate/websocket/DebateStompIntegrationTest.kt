@@ -74,6 +74,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("stage", "발언 제출/시간 초과 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
+                field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.ENTERED
                     it.role shouldBe DebateUserRole.HOST
@@ -90,6 +91,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("stage", "발언 제출/시간 초과 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
+                field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.ENTERED
                     it.role shouldBe DebateUserRole.GUEST
@@ -105,6 +107,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("stage", "발언 제출/시간 초과 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
+                field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
                 verify { it.type shouldBe DebateConnectionEvent.Type.STARTED }
             }
         }
