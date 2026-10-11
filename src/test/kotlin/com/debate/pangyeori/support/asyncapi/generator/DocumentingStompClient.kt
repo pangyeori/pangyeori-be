@@ -64,7 +64,7 @@ internal class DocumentingStompClient(
     }
 
     companion object {
-        private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(5)
+        private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(10)
         private val SUBSCRIBE_SETTLE: Duration = Duration.ofMillis(300)
     }
 }

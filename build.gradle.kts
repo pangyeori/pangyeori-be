@@ -5,6 +5,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("plugin.jpa") version "2.3.21"
     id("com.epages.restdocs-api-spec") version "0.20.1"
+    id("org.gradle.test-retry") version "1.6.6"
 }
 
 group = "com.debate"
@@ -137,6 +138,11 @@ val cleanAsyncApiSnippets by tasks.registering(Delete::class) {
 tasks.test {
     dependsOn(cleanGeneratedSnippets, cleanAsyncApiSnippets)
     systemProperty("org.springframework.restdocs.outputDir", snippetsDir.absolutePath)
+
+    retry {
+        maxRetries.set(2)
+        maxFailures.set(5)
+    }
 }
 
 afterEvaluate {

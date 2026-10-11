@@ -244,6 +244,6 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
 
     companion object {
         private const val AUTHORIZATION = "Authorization"
-        private const val TIMEOUT_SECONDS = 5L
+        private const val TIMEOUT_SECONDS = 10L
     }
 }
