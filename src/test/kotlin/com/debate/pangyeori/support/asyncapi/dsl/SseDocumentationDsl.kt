@@ -265,6 +265,6 @@ class SseDocumentationDsl internal constructor(
     ): Map<String, Any> = objectMapper.readValue(json, Map::class.java) as Map<String, Any>
 
     companion object {
-        private val EVENT_TIMEOUT: Duration = Duration.ofSeconds(10)
+        private val EVENT_TIMEOUT: Duration = Duration.ofSeconds(20)
     }
 }

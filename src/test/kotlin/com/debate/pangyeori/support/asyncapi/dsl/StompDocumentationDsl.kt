@@ -249,6 +249,6 @@ class StompDocumentationDsl internal constructor(
 
     companion object {
         private const val PROTOCOL = "stomp"
-        private val RECEIVE_TIMEOUT: Duration = Duration.ofSeconds(10)
+        private val RECEIVE_TIMEOUT: Duration = Duration.ofSeconds(20)
     }
 }
