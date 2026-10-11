@@ -30,6 +30,7 @@ class DebateHistoryRecordedEventHandler(
                     role = event.role,
                     stage = event.stage,
                     content = event.content,
+                    submittedAt = event.createdAt,
                 ),
             )
         }.onFailure {

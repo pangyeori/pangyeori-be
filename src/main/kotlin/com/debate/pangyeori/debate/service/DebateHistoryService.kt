@@ -71,9 +71,8 @@ class DebateHistoryService(
         )
         advance(
             debate = debate,
-            finishedStage = stage,
+            history = history,
             role = member.role,
-            content = content,
         )
         logger.info { "토론 발언을 제출했습니다. debateId=$debateId, stage=$stage" }
 
@@ -123,7 +122,7 @@ class DebateHistoryService(
             position = position,
         ) ?: return
 
-        debateHistoryRepository.save(
+        val history = debateHistoryRepository.save(
             DebateHistory.create(
                 debate = debate,
                 user = member.user,
@@ -133,29 +132,28 @@ class DebateHistoryService(
         )
         advance(
             debate = debate,
-            finishedStage = stage,
+            history = history,
             role = member.role,
-            content = null,
         )
         logger.info { "턴 시간이 초과되어 무응답으로 다음 단계로 넘어갔습니다. debateId=$debateId, stage=$stage" }
     }
 
     private fun advance(
         debate: Debate,
-        finishedStage: DebateStage,
+        history: DebateHistory,
         role: DebateUserRole,
-        content: String?,
     ) {
         eventPublisher.publishEvent(
             DebateHistoryRecordedEvent(
                 debateId = debate.id!!,
-                stage = finishedStage,
+                stage = history.stage,
                 role = role,
-                content = content,
+                content = history.content,
+                createdAt = history.createdAt!!,
             ),
         )
 
-        val nextStage = nextStage(finishedStage)
+        val nextStage = nextStage(history.stage)
         debate.advanceStage(next = nextStage)
 
         eventPublisher.publishEvent(

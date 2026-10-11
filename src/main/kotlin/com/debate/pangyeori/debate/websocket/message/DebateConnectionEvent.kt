@@ -11,6 +11,7 @@ data class DebateConnectionEvent(
     val stage: DebateStage? = null,
     val content: String? = null,
     val turnEndsAt: LocalDateTime? = null,
+    val submittedAt: LocalDateTime? = null,
 ) {
     enum class Type {
         ENTERED,
