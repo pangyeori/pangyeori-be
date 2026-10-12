@@ -3,10 +3,13 @@ package com.debate.pangyeori.debate.controller
 import com.debate.pangyeori.auth.service.AuthService
 import com.debate.pangyeori.debate.domain.Debate
 import com.debate.pangyeori.debate.domain.DebateHistory
+import com.debate.pangyeori.debate.domain.DebateVerdict
 import com.debate.pangyeori.debate.domain.enums.DebatePosition
 import com.debate.pangyeori.debate.domain.enums.DebateStage
+import com.debate.pangyeori.debate.domain.enums.WinnerPosition
 import com.debate.pangyeori.debate.repository.DebateHistoryRepository
 import com.debate.pangyeori.debate.repository.DebateRepository
+import com.debate.pangyeori.debate.repository.DebateVerdictRepository
 import com.debate.pangyeori.debate.service.DebateParticipationService
 import com.debate.pangyeori.debate.service.DebateService
 import com.debate.pangyeori.support.restdocs.RestDocsMvcTest
@@ -39,6 +42,9 @@ class DebateHistoryControllerTest : RestDocsMvcTest() {
 
     @Autowired
     private lateinit var debateHistoryRepository: DebateHistoryRepository
+
+    @Autowired
+    private lateinit var debateVerdictRepository: DebateVerdictRepository
 
     private fun issueAccessToken(
         email: String,
@@ -400,6 +406,14 @@ class DebateHistoryControllerTest : RestDocsMvcTest() {
                 content = "먼저 제출된 발언",
             ),
         )
+        debateVerdictRepository.save(
+            DebateVerdict.success(
+                debate = started,
+                stage = DebateStage.VERDICT_1,
+                winnerPosition = WinnerPosition.PROS,
+                reasoning = "찬성 측 발언이 더 구체적인 근거를 제시했습니다.",
+            ),
+        )
 
         restDocs(mockMvc, "debate-histories/get") {
             summary("발언 기록 조회")
@@ -415,11 +429,21 @@ class DebateHistoryControllerTest : RestDocsMvcTest() {
                 status(200)
                 body {
                     field("success", "처리 성공 여부")
-                    array("data", "발언 기록 목록 (제출 시각순)") {
-                        field("id", "발언 기록 ID")
-                        field("stage", "발언 단계")
-                        field("content", "발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
-                        field("createdAt", "제출 시각")
+                    obj("data", "발언 기록과 AI 중간 판결") {
+                        array("histories", "발언 기록 목록 (제출 시각순)") {
+                            field("id", "발언 기록 ID")
+                            field("stage", "발언 단계")
+                            field("content", "발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
+                            field("createdAt", "제출 시각")
+                        }
+                        array("verdicts", "AI 중간 판결 목록 (발급 시각순)") {
+                            field("id", "판결 ID")
+                            field("stage", "판결이 내려진 토론 단계")
+                            field("status", "판결 처리 상태 (SUCCESS, FAILED)")
+                            field("winnerPosition", "판결 시점 기준 우세 포지션. 판결에 실패한 경우 null").optional()
+                            field("reasoning", "판결 근거. 판결에 실패한 경우 null").optional()
+                            field("createdAt", "판결 발급 시각")
+                        }
                     }
                     field("error", "오류 정보").optional()
                 }

@@ -50,6 +50,21 @@ spring:
           starttls:
             enable: true
 
+  ai:
+    openai:
+      api-key: ${NVIDIA_API_KEY}
+      base-url: https://integrate.api.nvidia.com/v1
+      chat:
+        completions-path: /chat/completions
+        options:
+          model: ${NVIDIA_CHAT_MODEL}
+    retry:
+      max-attempts: 3
+      backoff:
+        initial-interval: 1s
+        multiplier: 2
+        max-interval: 5s
+
 management:
   endpoints:
     web:

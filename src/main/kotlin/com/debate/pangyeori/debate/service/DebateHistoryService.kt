@@ -6,13 +6,16 @@ import com.debate.pangyeori.debate.domain.enums.DebatePosition
 import com.debate.pangyeori.debate.domain.enums.DebateStage
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.domain.enums.DebateUserRole
+import com.debate.pangyeori.debate.dto.response.DebateHistoriesResponse
 import com.debate.pangyeori.debate.dto.response.DebateHistoryResponse
+import com.debate.pangyeori.debate.dto.response.DebateVerdictResponse
 import com.debate.pangyeori.debate.event.DebateHistoryRecordedEvent
 import com.debate.pangyeori.debate.event.DebateStageChangedEvent
 import com.debate.pangyeori.debate.exception.*
 import com.debate.pangyeori.debate.repository.DebateHistoryRepository
 import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.repository.DebateUserRepository
+import com.debate.pangyeori.debate.repository.DebateVerdictRepository
 import com.debate.pangyeori.user.exception.UserNotFoundException
 import com.debate.pangyeori.user.repository.UserRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -27,6 +30,7 @@ class DebateHistoryService(
     private val debateRepository: DebateRepository,
     private val debateUserRepository: DebateUserRepository,
     private val debateHistoryRepository: DebateHistoryRepository,
+    private val debateVerdictRepository: DebateVerdictRepository,
     private val userRepository: UserRepository,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
@@ -85,7 +89,7 @@ class DebateHistoryService(
     fun getHistories(
         debateId: String,
         userEmail: String,
-    ): List<DebateHistoryResponse> {
+    ): DebateHistoriesResponse {
         val user = userRepository.findByEmail(
             email = userEmail,
         ) ?: throw UserNotFoundException()
@@ -98,9 +102,14 @@ class DebateHistoryService(
             debateId = debateId,
         )
 
-        return debateHistoryRepository.findAllByDebateIdOrderByCreatedAtAsc(
-            debateId = debateId,
-        ).map { DebateHistoryResponse.from(history = it) }
+        return DebateHistoriesResponse(
+            histories = debateHistoryRepository.findAllByDebateIdOrderByCreatedAtAsc(
+                debateId = debateId,
+            ).map { DebateHistoryResponse.from(history = it) },
+            verdicts = debateVerdictRepository.findAllByDebateIdOrderByCreatedAtAsc(
+                debateId = debateId,
+            ).map { DebateVerdictResponse.from(verdict = it) },
+        )
     }
 
     @Transactional
