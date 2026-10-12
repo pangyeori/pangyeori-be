@@ -30,6 +30,17 @@ spring:
           starttls:
             enable: true
 
+  ai:
+    openai:
+      api-key: test-nvidia-api-key
+      base-url: https://integrate.api.nvidia.com/v1
+      chat:
+        completions-path: /chat/completions
+        options:
+          model: test-model
+    retry:
+      max-attempts: 1
+
 aws:
   region: ap-northeast-2
   s3:

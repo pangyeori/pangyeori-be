@@ -75,6 +75,9 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
+                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.ENTERED
                     it.role shouldBe DebateUserRole.HOST
@@ -92,6 +95,9 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
+                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.ENTERED
                     it.role shouldBe DebateUserRole.GUEST
@@ -108,6 +114,9 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
+                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 verify { it.type shouldBe DebateConnectionEvent.Type.STARTED }
             }
         }

@@ -14,6 +14,7 @@ import com.debate.pangyeori.debate.exception.DebateNotYourTurnException
 import com.debate.pangyeori.debate.repository.DebateHistoryRepository
 import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.repository.DebateUserRepository
+import com.debate.pangyeori.debate.repository.DebateVerdictRepository
 import com.debate.pangyeori.support.fixture.setAuditFields
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.repository.UserRepository
@@ -36,12 +37,14 @@ class DebateHistoryServiceTest : BehaviorSpec({
     val debateRepository = mockk<DebateRepository>()
     val debateUserRepository = mockk<DebateUserRepository>()
     val debateHistoryRepository = mockk<DebateHistoryRepository>()
+    val debateVerdictRepository = mockk<DebateVerdictRepository>()
     val userRepository = mockk<UserRepository>()
     val eventPublisher = mockk<ApplicationEventPublisher>(relaxed = true)
     val service = DebateHistoryService(
         debateRepository = debateRepository,
         debateUserRepository = debateUserRepository,
         debateHistoryRepository = debateHistoryRepository,
+        debateVerdictRepository = debateVerdictRepository,
         userRepository = userRepository,
         eventPublisher = eventPublisher,
     )
@@ -55,7 +58,7 @@ class DebateHistoryServiceTest : BehaviorSpec({
     val now = LocalDateTime.now(ZoneOffset.UTC)
 
     beforeEach {
-        clearMocks(debateRepository, debateUserRepository, debateHistoryRepository, userRepository, eventPublisher)
+        clearMocks(debateRepository, debateUserRepository, debateHistoryRepository, debateVerdictRepository, userRepository, eventPublisher)
     }
 
     fun debate(
