@@ -33,3 +33,8 @@ class DebateUserStatusConverter : CodeEnumConverter<DebateUserStatus>(
 class WinnerPositionConverter : CodeEnumConverter<WinnerPosition>(
     enumConstants = WinnerPosition.entries.toTypedArray(),
 )
+
+@Converter(autoApply = true)
+class DebateVerdictStatusConverter : CodeEnumConverter<DebateVerdictStatus>(
+    enumConstants = DebateVerdictStatus.entries.toTypedArray(),
+)

@@ -23,6 +23,12 @@ repositories {
 
 val snippetsDir = file("build/generated-snippets")
 
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.ai:spring-ai-bom:2.0.1")
+    }
+}
+
 openapi3 {
     setServer("http://localhost:8080")
     title = "Pangyeori REST API"
@@ -74,6 +80,9 @@ dependencies {
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")
+
+    // AI
+    implementation("org.springframework.ai:spring-ai-starter-model-openai")
 
     // Development
     developmentOnly("org.springframework.boot:spring-boot-devtools")

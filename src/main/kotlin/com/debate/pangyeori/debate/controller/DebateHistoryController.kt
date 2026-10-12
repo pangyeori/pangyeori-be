@@ -2,6 +2,7 @@ package com.debate.pangyeori.debate.controller
 
 import com.debate.pangyeori.common.dto.ApiResponse
 import com.debate.pangyeori.debate.dto.request.DebateHistorySubmitRequest
+import com.debate.pangyeori.debate.dto.response.DebateHistoriesResponse
 import com.debate.pangyeori.debate.dto.response.DebateHistoryResponse
 import com.debate.pangyeori.debate.service.DebateHistoryService
 import jakarta.validation.Valid
@@ -43,7 +44,7 @@ class DebateHistoryController(
     fun getHistories(
         principal: Principal,
         @PathVariable debateId: String,
-    ): ResponseEntity<ApiResponse<List<DebateHistoryResponse>>> {
+    ): ResponseEntity<ApiResponse<DebateHistoriesResponse>> {
         val response = debateHistoryService.getHistories(
             debateId = debateId,
             userEmail = principal.name,
