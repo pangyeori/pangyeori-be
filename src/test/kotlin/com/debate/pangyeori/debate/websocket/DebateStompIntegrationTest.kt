@@ -270,6 +270,129 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
             }
             receive<DebateConnectionEvent>(
                 summary = "토론방 입장, 이탈, 진행 상황이 바뀌면 받는 이벤트",
+                example = "찬성 논박 제출",
+            ) {
+                trigger {
+                    debateHistoryService.submit(
+                        debateId = debateId,
+                        userEmail = host.email,
+                        content = "반대측 주장에 반박합니다",
+                    )
+                }
+                field("debateId", "토론방 ID")
+                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
+                field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
+                field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
+                field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
+                field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
+                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                verify {
+                    it.type shouldBe DebateConnectionEvent.Type.STATEMENT_SUBMITTED
+                    it.role shouldBe DebateUserRole.HOST
+                    it.content shouldBe "반대측 주장에 반박합니다"
+                }
+            }
+            receive<DebateConnectionEvent>(
+                summary = "토론방 입장, 이탈, 진행 상황이 바뀌면 받는 이벤트",
+                example = "반대 논박 단계로 전환",
+            ) {
+                field("debateId", "토론방 ID")
+                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
+                field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
+                field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
+                field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
+                field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
+                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                verify { it.stage shouldBe DebateStage.REBUTTAL_CONS }
+            }
+            receive<DebateConnectionEvent>(
+                summary = "토론방 입장, 이탈, 진행 상황이 바뀌면 받는 이벤트",
+                example = "반대 논박 제출",
+            ) {
+                trigger {
+                    debateHistoryService.submit(
+                        debateId = debateId,
+                        userEmail = guest.email,
+                        content = "찬성측 주장에 반박합니다",
+                    )
+                }
+                field("debateId", "토론방 ID")
+                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
+                field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
+                field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
+                field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
+                field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
+                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                verify {
+                    it.type shouldBe DebateConnectionEvent.Type.STATEMENT_SUBMITTED
+                    it.role shouldBe DebateUserRole.GUEST
+                    it.content shouldBe "찬성측 주장에 반박합니다"
+                }
+            }
+            receive<DebateConnectionEvent>(
+                summary = "토론방 입장, 이탈, 진행 상황이 바뀌면 받는 이벤트",
+                example = "AI 2차 중간 판결 단계로 전환",
+            ) {
+                field("debateId", "토론방 ID")
+                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
+                field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
+                field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
+                field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
+                field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
+                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                verify { it.stage shouldBe DebateStage.VERDICT_2 }
+            }
+            receive<DebateConnectionEvent>(
+                summary = "토론방 입장, 이탈, 진행 상황이 바뀌면 받는 이벤트",
+                example = "AI 2차 중간 판결 완료",
+            ) {
+                field("debateId", "토론방 ID")
+                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
+                field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
+                field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
+                field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
+                field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
+                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                verify {
+                    it.type shouldBe DebateConnectionEvent.Type.VERDICT_ISSUED
+                    it.stage shouldBe DebateStage.VERDICT_2
+                    it.verdictStatus shouldBe DebateVerdictStatus.SUCCESS
+                    it.winnerPosition shouldBe WinnerPosition.PROS
+                }
+            }
+            receive<DebateConnectionEvent>(
+                summary = "토론방 입장, 이탈, 진행 상황이 바뀌면 받는 이벤트",
+                example = "자유 토론 단계로 전환",
+            ) {
+                field("debateId", "토론방 ID")
+                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
+                field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
+                field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
+                field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
+                field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
+                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                verify { it.stage shouldBe DebateStage.FREE }
+            }
+            receive<DebateConnectionEvent>(
+                summary = "토론방 입장, 이탈, 진행 상황이 바뀌면 받는 이벤트",
                 example = "게스트 이탈",
             ) {
                 trigger { guestSubscriber.session.disconnect() }
@@ -291,6 +414,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
         }
 
         debateRepository.findById(debateId).get().status shouldBe DebateStatus.IN_PROGRESS
+        debateRepository.findById(debateId).get().currentStage shouldBe DebateStage.FREE
+        val histories = debateHistoryService.getHistories(
+            debateId = debateId,
+            userEmail = host.email,
+        )
+        histories.histories.map { it.stage } shouldBe listOf(
+            DebateStage.OPENING_PROS,
+            DebateStage.OPENING_CONS,
+            DebateStage.REBUTTAL_PROS,
+            DebateStage.REBUTTAL_CONS,
+        )
+        histories.verdicts.map { it.stage } shouldBe listOf(DebateStage.VERDICT_1, DebateStage.VERDICT_2)
     }
 
     @Test

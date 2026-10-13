@@ -79,10 +79,11 @@ class DebateVerdictServiceTest : BehaviorSpec({
         status: DebateVerdictStatus,
         winnerPosition: WinnerPosition? = null,
         reasoning: String? = null,
+        stage: DebateStage = DebateStage.VERDICT_1,
     ) = setAuditFields(
         fixtureMonkey.giveMeKotlinBuilder<DebateVerdict>()
             .set(DebateVerdict::id, "0000000000099")
-            .set(DebateVerdict::stage, DebateStage.VERDICT_1)
+            .set(DebateVerdict::stage, stage)
             .set(DebateVerdict::status, status)
             .set(DebateVerdict::winnerPosition, winnerPosition)
             .set(DebateVerdict::reasoning, reasoning)
@@ -111,8 +112,11 @@ class DebateVerdictServiceTest : BehaviorSpec({
                         DebateVerdictJudgmentRequest(
                             title = "AI 판결 검증 토론",
                             description = null,
+                            stage = DebateStage.VERDICT_1,
                             prosStatement = "저는 찬성합니다",
                             consStatement = "저는 반대합니다",
+                            prosRebuttal = null,
+                            consRebuttal = null,
                         ),
                     )
                 }
@@ -177,6 +181,141 @@ class DebateVerdictServiceTest : BehaviorSpec({
 
                 verify(exactly = 0) { debateHistoryRepository.findAllByDebateIdOrderByCreatedAtAsc(any()) }
                 verify(exactly = 0) { debateVerdictRepository.save(any()) }
+            }
+        }
+    }
+    Given("2차 AI 중간 판결을 발급하면") {
+        for (success in listOf(true, false)) {
+            When(if (success) "논박 평가에 성공하면" else "논박 평가에 실패하면") {
+                Then("2차 판결을 저장하고 자유 토론으로 전환한다") {
+                    val target = debate(
+                        stage = DebateStage.VERDICT_2,
+                    )
+                    val rebuttals = listOf(
+                        fixtureMonkey.giveMeKotlinBuilder<DebateHistory>()
+                            .set(DebateHistory::stage, DebateStage.REBUTTAL_PROS)
+                            .set(DebateHistory::content, "반대측 근거에 반박합니다")
+                            .sample(),
+                        fixtureMonkey.giveMeKotlinBuilder<DebateHistory>()
+                            .set(DebateHistory::stage, DebateStage.REBUTTAL_CONS)
+                            .set(DebateHistory::content, "찬성측 근거에 반박합니다")
+                            .sample(),
+                    )
+                    val status = if (success) DebateVerdictStatus.SUCCESS else DebateVerdictStatus.FAILED
+                    every { debateRepository.findWithLockById(debateId) } returns target
+                    every {
+                        debateVerdictRepository.findByDebateIdAndStage(debateId, DebateStage.VERDICT_2)
+                    } returns null
+                    every {
+                        debateHistoryRepository.findAllByDebateIdOrderByCreatedAtAsc(debateId)
+                    } returns histories() + rebuttals
+                    if (success) {
+                        every { debateVerdictAiClient.judge(any()) } returns DebateVerdictJudgment(
+                            winnerPosition = WinnerPosition.CONS,
+                            reasoning = "반대측 논박이 더 타당합니다",
+                        )
+                    } else {
+                        every { debateVerdictAiClient.judge(any()) } throws IllegalStateException("AI 호출 실패")
+                    }
+                    every { debateVerdictRepository.save(any()) } answers {
+                        val saved = firstArg<DebateVerdict>()
+                        saved.stage shouldBe DebateStage.VERDICT_2
+                        saved.status shouldBe status
+                        saved.winnerPosition shouldBe if (success) WinnerPosition.CONS else null
+                        verdict(
+                            status = status,
+                            stage = DebateStage.VERDICT_2,
+                            winnerPosition = if (success) WinnerPosition.CONS else null,
+                            reasoning = if (success) "반대측 논박이 더 타당합니다" else null,
+                        )
+                    }
+
+                    service.issueVerdict(
+                        debateId = debateId,
+                        stage = DebateStage.VERDICT_2,
+                    )
+
+                    target.currentStage shouldBe DebateStage.FREE
+                    verify(exactly = 1) {
+                        debateVerdictAiClient.judge(
+                            DebateVerdictJudgmentRequest(
+                                title = "AI 판결 검증 토론",
+                                description = null,
+                                stage = DebateStage.VERDICT_2,
+                                prosStatement = "저는 찬성합니다",
+                                consStatement = "저는 반대합니다",
+                                prosRebuttal = "반대측 근거에 반박합니다",
+                                consRebuttal = "찬성측 근거에 반박합니다",
+                            ),
+                        )
+                        eventPublisher.publishEvent(
+                            match<DebateVerdictIssuedEvent> {
+                                it.stage == DebateStage.VERDICT_2 && it.status == status
+                            },
+                        )
+                        eventPublisher.publishEvent(match<DebateStageChangedEvent> { it.stage == DebateStage.FREE })
+                    }
+                }
+            }
+        }
+
+        When("양측 논박이 시간 초과로 제출되지 않으면") {
+            Then("무응답을 AI에 전달하고 2차 판결을 발급한다") {
+                val target = debate(
+                    stage = DebateStage.VERDICT_2,
+                )
+                every { debateRepository.findWithLockById(debateId) } returns target
+                every {
+                    debateVerdictRepository.findByDebateIdAndStage(debateId, DebateStage.VERDICT_2)
+                } returns null
+                every {
+                    debateHistoryRepository.findAllByDebateIdOrderByCreatedAtAsc(debateId)
+                } returns histories()
+                every { debateVerdictAiClient.judge(any()) } returns DebateVerdictJudgment(
+                    winnerPosition = WinnerPosition.DRAW,
+                    reasoning = "양측 논박이 없습니다",
+                )
+                every { debateVerdictRepository.save(any()) } returns verdict(
+                    status = DebateVerdictStatus.SUCCESS,
+                    stage = DebateStage.VERDICT_2,
+                    winnerPosition = WinnerPosition.DRAW,
+                    reasoning = "양측 논박이 없습니다",
+                )
+
+                service.issueVerdict(
+                    debateId = debateId,
+                    stage = DebateStage.VERDICT_2,
+                )
+
+                target.currentStage shouldBe DebateStage.FREE
+                verify(exactly = 1) {
+                    debateVerdictAiClient.judge(match {
+                        it.stage == DebateStage.VERDICT_2 && it.prosRebuttal == null && it.consRebuttal == null
+                    })
+                }
+            }
+        }
+
+        When("2차 판결이 이미 발급되어 있으면") {
+            Then("AI 호출과 단계 전환을 반복하지 않는다") {
+                val target = debate(
+                    stage = DebateStage.VERDICT_2,
+                )
+                every { debateRepository.findWithLockById(debateId) } returns target
+                every {
+                    debateVerdictRepository.findByDebateIdAndStage(debateId, DebateStage.VERDICT_2)
+                } returns verdict(
+                    status = DebateVerdictStatus.SUCCESS,
+                    stage = DebateStage.VERDICT_2,
+                )
+
+                service.issueVerdict(
+                    debateId = debateId,
+                    stage = DebateStage.VERDICT_2,
+                )
+
+                verify(exactly = 0) { debateVerdictAiClient.judge(any()) }
+                verify(exactly = 0) { eventPublisher.publishEvent(any()) }
             }
         }
     }

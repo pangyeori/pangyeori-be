@@ -177,20 +177,23 @@ class DebateHistoryService(
     private fun positionForStage(
         stage: DebateStage,
     ): DebatePosition? = when (stage) {
-        DebateStage.OPENING_PROS -> DebatePosition.PROS
-        DebateStage.OPENING_CONS -> DebatePosition.CONS
+        DebateStage.OPENING_PROS, DebateStage.REBUTTAL_PROS -> DebatePosition.PROS
+        DebateStage.OPENING_CONS, DebateStage.REBUTTAL_CONS -> DebatePosition.CONS
         else -> null
     }
 
     private fun isTimedStage(
         stage: DebateStage,
-    ) = stage == DebateStage.OPENING_PROS || stage == DebateStage.OPENING_CONS
+    ) = stage == DebateStage.OPENING_PROS || stage == DebateStage.OPENING_CONS ||
+        stage == DebateStage.REBUTTAL_PROS || stage == DebateStage.REBUTTAL_CONS
 
     private fun nextStage(
         current: DebateStage,
     ) = when (current) {
         DebateStage.OPENING_PROS -> DebateStage.OPENING_CONS
         DebateStage.OPENING_CONS -> DebateStage.VERDICT_1
+        DebateStage.REBUTTAL_PROS -> DebateStage.REBUTTAL_CONS
+        DebateStage.REBUTTAL_CONS -> DebateStage.VERDICT_2
         else -> throw IllegalStateException("이 단계에서는 다음 단계로 넘어갈 수 없습니다: $current")
     }
 }

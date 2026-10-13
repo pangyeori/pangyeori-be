@@ -37,7 +37,7 @@ class DebateVerdictService(
         if (debateVerdictRepository.findByDebateIdAndStage(debateId = debateId, stage = stage) != null) return
 
         val histories = debateHistoryRepository.findAllByDebateIdOrderByCreatedAtAsc(debateId = debateId)
-        val judgment = requestJudgment(debate = debate, histories = histories)
+        val judgment = requestJudgment(debate = debate, histories = histories, stage = stage)
 
         val verdict = debateVerdictRepository.save(
             if (judgment != null) {
@@ -83,13 +83,17 @@ class DebateVerdictService(
     private fun requestJudgment(
         debate: Debate,
         histories: List<DebateHistory>,
+        stage: DebateStage,
     ): DebateVerdictJudgment? = runCatching {
         debateVerdictAiClient.judge(
             request = DebateVerdictJudgmentRequest(
                 title = debate.title,
                 description = debate.description,
+                stage = stage,
                 prosStatement = statementFor(histories = histories, stage = DebateStage.OPENING_PROS),
                 consStatement = statementFor(histories = histories, stage = DebateStage.OPENING_CONS),
+                prosRebuttal = statementFor(histories = histories, stage = DebateStage.REBUTTAL_PROS),
+                consRebuttal = statementFor(histories = histories, stage = DebateStage.REBUTTAL_CONS),
             ),
         )
     }.onFailure {
@@ -105,6 +109,7 @@ class DebateVerdictService(
         stage: DebateStage,
     ) = when (stage) {
         DebateStage.VERDICT_1 -> DebateStage.REBUTTAL_PROS
+        DebateStage.VERDICT_2 -> DebateStage.FREE
         else -> throw IllegalStateException("이 판정 단계 다음 단계가 아직 정의되지 않았습니다: $stage")
     }
 }
