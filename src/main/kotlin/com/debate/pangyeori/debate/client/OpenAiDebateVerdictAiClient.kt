@@ -2,6 +2,7 @@ package com.debate.pangyeori.debate.client
 
 import com.debate.pangyeori.debate.client.DebateVerdictAiClient.DebateVerdictJudgment
 import com.debate.pangyeori.debate.client.DebateVerdictAiClient.DebateVerdictJudgmentRequest
+import com.debate.pangyeori.debate.domain.enums.DebateStage
 import com.debate.pangyeori.debate.domain.enums.WinnerPosition
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.stereotype.Component
@@ -29,16 +30,34 @@ class OpenAiDebateVerdictAiClient(
 
     private fun buildUserPrompt(
         request: DebateVerdictJudgmentRequest,
-    ) = """
-        토론 주제: ${request.title}
-        토론 설명: ${request.description ?: "없음"}
+    ): String {
+        if (request.stage == DebateStage.VERDICT_2) {
+            return """
+                토론 주제: ${request.title}
+                토론 설명: ${request.description ?: "없음"}
 
-        찬성(PROS) 측 입장 발언: ${request.prosStatement ?: "시간 초과로 제출하지 않음"}
-        반대(CONS) 측 입장 발언: ${request.consStatement ?: "시간 초과로 제출하지 않음"}
+                찬성(PROS) 측 입장 발언: ${request.prosStatement ?: "시간 초과로 제출하지 않음"}
+                반대(CONS) 측 입장 발언: ${request.consStatement ?: "시간 초과로 제출하지 않음"}
 
-        위 입장 발언만을 근거로 현재 시점에서 어느 쪽 주장이 더 설득력 있는지 평가해주세요.
-        아직 토론이 끝나지 않았으므로 최종 승패를 확정하지 말고, 지금까지의 발언에 대한 중간 평가로만 답해주세요.
-    """.trimIndent()
+                찬성(PROS) 측 논박 발언: ${request.prosRebuttal ?: "시간 초과로 제출하지 않음"}
+                반대(CONS) 측 논박 발언: ${request.consRebuttal ?: "시간 초과로 제출하지 않음"}
+
+                입장 발언은 맥락으로 참고하고, 위 논박 발언을 기준으로 어느 쪽이 상대 주장에 더 타당하게 대응했는지 평가해주세요.
+                아직 토론이 끝나지 않았으므로 최종 승패를 확정하지 말고, 논박 구간에 대한 중간 평가로만 답해주세요.
+            """.trimIndent()
+        }
+
+        return """
+            토론 주제: ${request.title}
+            토론 설명: ${request.description ?: "없음"}
+
+            찬성(PROS) 측 입장 발언: ${request.prosStatement ?: "시간 초과로 제출하지 않음"}
+            반대(CONS) 측 입장 발언: ${request.consStatement ?: "시간 초과로 제출하지 않음"}
+
+            위 입장 발언만을 근거로 현재 시점에서 어느 쪽 주장이 더 설득력 있는지 평가해주세요.
+            아직 토론이 끝나지 않았으므로 최종 승패를 확정하지 말고, 지금까지의 발언에 대한 중간 평가로만 답해주세요.
+        """.trimIndent()
+    }
 
     private data class AiVerdictResponse(
         val winnerPosition: WinnerPosition,

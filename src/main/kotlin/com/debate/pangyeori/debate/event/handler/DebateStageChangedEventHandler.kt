@@ -67,9 +67,10 @@ class DebateStageChangedEventHandler(
 
     private fun isTimedStage(
         stage: DebateStage,
-    ) = stage == DebateStage.OPENING_PROS || stage == DebateStage.OPENING_CONS
+    ) = stage == DebateStage.OPENING_PROS || stage == DebateStage.OPENING_CONS ||
+        stage == DebateStage.REBUTTAL_PROS || stage == DebateStage.REBUTTAL_CONS
 
     private fun isVerdictStage(
         stage: DebateStage,
-    ) = stage == DebateStage.VERDICT_1
+    ) = stage == DebateStage.VERDICT_1 || stage == DebateStage.VERDICT_2
 }
