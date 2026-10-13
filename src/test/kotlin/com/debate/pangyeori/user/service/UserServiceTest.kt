@@ -6,6 +6,8 @@ import com.debate.pangyeori.auth.repository.RefreshTokenRepository
 import com.debate.pangyeori.common.exception.StorageUnavailableException
 import com.debate.pangyeori.storage.client.ObjectStorage
 import com.debate.pangyeori.support.fixture.setAuditFields
+import com.debate.pangyeori.terms.exception.RequiredTermsNotAgreedException
+import com.debate.pangyeori.terms.service.TermsAgreementService
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.domain.enums.UserStatus
 import com.debate.pangyeori.user.exception.EmailAlreadyExistsException
@@ -32,6 +34,7 @@ class UserServiceTest : BehaviorSpec({
     val refreshTokenRepository = mockk<RefreshTokenRepository>()
     val objectStorage = mockk<ObjectStorage>(relaxUnitFun = true)
     val passwordEncoder = mockk<PasswordEncoder>()
+    val termsAgreementService = mockk<TermsAgreementService>()
 
     val userService = UserService(
         userRepository = userRepository,
@@ -39,6 +42,7 @@ class UserServiceTest : BehaviorSpec({
         refreshTokenRepository = refreshTokenRepository,
         objectStorage = objectStorage,
         passwordEncoder = passwordEncoder,
+        termsAgreementService = termsAgreementService,
     )
 
     val fixtureMonkey = FixtureMonkey.builder()
@@ -48,6 +52,7 @@ class UserServiceTest : BehaviorSpec({
     val email = "user@pangyeori.com"
     val password = "password123!"
     val nickname = "판결이"
+    val agreedTermsIds = listOf("0000000000011", "0000000000012")
 
     beforeEach {
         clearMocks(
@@ -56,7 +61,13 @@ class UserServiceTest : BehaviorSpec({
             refreshTokenRepository,
             objectStorage,
             passwordEncoder,
+            termsAgreementService,
         )
+        every {
+            termsAgreementService.isMarketingAgreed(
+                userId = any(),
+            )
+        } returns false
     }
 
     fun activeUser(
@@ -105,6 +116,12 @@ class UserServiceTest : BehaviorSpec({
                     userRepository.save(capture(userSlot))
                 } returns savedUser
                 every {
+                    termsAgreementService.agreeAtSignUp(
+                        user = savedUser,
+                        agreedTermsIds = agreedTermsIds,
+                    )
+                } just runs
+                every {
                     emailVerificationRedisRepository.clearVerified(
                         email = email,
                     )
@@ -114,12 +131,70 @@ class UserServiceTest : BehaviorSpec({
                     email = email,
                     password = password,
                     nickname = nickname,
+                    agreedTermsIds = agreedTermsIds,
                 )
 
                 userSlot.captured.password shouldBe "encoded-password"
                 verify {
+                    termsAgreementService.agreeAtSignUp(
+                        user = savedUser,
+                        agreedTermsIds = agreedTermsIds,
+                    )
                     emailVerificationRedisRepository.clearVerified(
                         email = email,
+                    )
+                }
+            }
+        }
+
+        When("필수 약관에 동의하지 않아 약관 검증이 실패하면") {
+            Then("RequiredTermsNotAgreedException을 던지고 인증 표식을 제거하지 않는다") {
+                val savedUser = fixtureMonkey.giveMeKotlinBuilder<User>()
+                    .set(User::id, "0000000000001")
+                    .set(User::email, email)
+                    .set(User::nickname, nickname)
+                    .sample()
+
+                every {
+                    emailVerificationRedisRepository.isVerified(
+                        email = email,
+                    )
+                } returns true
+                every {
+                    userRepository.existsByEmail(
+                        email = email,
+                    )
+                } returns false
+                every {
+                    userRepository.existsByNickname(
+                        nickname = nickname,
+                    )
+                } returns false
+                every {
+                    passwordEncoder.encode(password)
+                } returns "encoded-password"
+                every {
+                    userRepository.save(any())
+                } returns savedUser
+                every {
+                    termsAgreementService.agreeAtSignUp(
+                        user = savedUser,
+                        agreedTermsIds = agreedTermsIds,
+                    )
+                } throws RequiredTermsNotAgreedException()
+
+                shouldThrow<RequiredTermsNotAgreedException> {
+                    userService.createUser(
+                        email = email,
+                        password = password,
+                        nickname = nickname,
+                        agreedTermsIds = agreedTermsIds,
+                    )
+                }
+
+                verify(exactly = 0) {
+                    emailVerificationRedisRepository.clearVerified(
+                        email = any(),
                     )
                 }
             }
@@ -140,6 +215,7 @@ class UserServiceTest : BehaviorSpec({
                         email = email,
                         password = password,
                         nickname = nickname,
+                        agreedTermsIds = agreedTermsIds,
                     )
                 }
             }
@@ -158,6 +234,7 @@ class UserServiceTest : BehaviorSpec({
                         email = email,
                         password = password,
                         nickname = nickname,
+                        agreedTermsIds = agreedTermsIds,
                     )
                 }
             }
@@ -186,6 +263,7 @@ class UserServiceTest : BehaviorSpec({
                         email = email,
                         password = password,
                         nickname = nickname,
+                        agreedTermsIds = agreedTermsIds,
                     )
                 }
             }
@@ -209,6 +287,7 @@ class UserServiceTest : BehaviorSpec({
                         email = email,
                         password = password,
                         nickname = nickname,
+                        agreedTermsIds = agreedTermsIds,
                     )
                 }
             }
@@ -233,6 +312,12 @@ class UserServiceTest : BehaviorSpec({
                     userRepository.save(any())
                 } returns activeUser()
                 every {
+                    termsAgreementService.agreeAtSignUp(
+                        user = any(),
+                        agreedTermsIds = any(),
+                    )
+                } just runs
+                every {
                     emailVerificationRedisRepository.clearVerified(
                         email = email,
                     )
@@ -243,6 +328,7 @@ class UserServiceTest : BehaviorSpec({
                         email = email,
                         password = password,
                         nickname = nickname,
+                        agreedTermsIds = agreedTermsIds,
                     )
                 }
             }
@@ -297,6 +383,11 @@ class UserServiceTest : BehaviorSpec({
                         email = email,
                     )
                 } returns user
+                every {
+                    termsAgreementService.isMarketingAgreed(
+                        userId = user.id!!,
+                    )
+                } returns true
 
                 val response = userService.getMyInfo(
                     email = email,
@@ -307,6 +398,7 @@ class UserServiceTest : BehaviorSpec({
                 response.nickname shouldBe user.nickname
                 response.profileImageKey shouldBe user.profileImageKey
                 response.joinedAt shouldBe user.createdAt
+                response.marketingAgreed shouldBe true
             }
         }
 

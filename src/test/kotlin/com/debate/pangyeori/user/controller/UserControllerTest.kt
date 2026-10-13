@@ -5,12 +5,17 @@ import com.debate.pangyeori.auth.service.AuthService
 import com.debate.pangyeori.storage.client.TestObjectStorageConfig
 import com.debate.pangyeori.support.restdocs.RestDocsMvcTest
 import com.debate.pangyeori.support.restdocs.dsl.restDocs
+import com.debate.pangyeori.terms.domain.Terms
+import com.debate.pangyeori.terms.domain.enums.TermsType
+import com.debate.pangyeori.terms.repository.TermsRepository
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.repository.UserRepository
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Import
 import org.springframework.security.crypto.password.PasswordEncoder
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 @Import(TestObjectStorageConfig::class)
 class UserControllerTest : RestDocsMvcTest() {
@@ -26,6 +31,38 @@ class UserControllerTest : RestDocsMvcTest() {
 
     @Autowired
     private lateinit var authService: AuthService
+
+    @Autowired
+    private lateinit var termsRepository: TermsRepository
+
+    private fun createTerms(
+        type: TermsType,
+        version: Int = 1,
+        title: String,
+        required: Boolean,
+    ) = termsRepository.save(
+        Terms.create(
+            type = type,
+            version = version,
+            title = title,
+            content = "$title 본문입니다.",
+            required = required,
+            effectiveAt = LocalDateTime.now(ZoneOffset.UTC).minusDays(1),
+        ),
+    )
+
+    private fun createRequiredTerms(): List<Terms> = listOf(
+        createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            title = "이용약관",
+            required = true,
+        ),
+        createTerms(
+            type = TermsType.PRIVACY_POLICY,
+            title = "개인정보 수집·이용 동의",
+            required = true,
+        ),
+    )
 
     private fun issueAccessToken(
         email: String,
@@ -68,6 +105,7 @@ class UserControllerTest : RestDocsMvcTest() {
                         field("nickname", "사용자 닉네임")
                         field("profileImageKey", "프로필 이미지 키").optional()
                         field("joinedAt", "가입일자")
+                        field("marketingAgreed", "마케팅 수신 동의 여부")
                     }
                     field("error", "오류 정보").optional()
                 }
@@ -104,6 +142,13 @@ class UserControllerTest : RestDocsMvcTest() {
         emailVerificationRedisRepository.markVerified(
             email = email,
         )
+        val agreedTermsIds = (
+            createRequiredTerms() + createTerms(
+                type = TermsType.MARKETING,
+                title = "마케팅 수신 동의",
+                required = false,
+            )
+        ).map { it.id!! }
 
         restDocs(mockMvc, "users/create") {
             summary("회원가입")
@@ -113,6 +158,7 @@ class UserControllerTest : RestDocsMvcTest() {
                     field("email", email, "인증을 완료한 이메일")
                     field("password", "password123!", "8자 이상 64자 이하 비밀번호")
                     field("nickname", "판결이", "사용할 닉네임")
+                    field("agreedTermsIds", agreedTermsIds, "동의한 약관 ID 목록 (필수 약관은 모두 포함해야 하며 선택 약관은 동의한 것만 포함)")
                 }
             }
             response {
@@ -271,6 +317,7 @@ class UserControllerTest : RestDocsMvcTest() {
                     field("email", "not-verified@pangyeori.com", "인증하지 않은 이메일")
                     field("password", "password123!", "비밀번호")
                     field("nickname", "미인증사용자", "닉네임")
+                    field("agreedTermsIds", createRequiredTerms().map { it.id!! }, "동의한 약관 ID 목록")
                 }
             }
             response {
@@ -310,6 +357,7 @@ class UserControllerTest : RestDocsMvcTest() {
                     field("email", email, "이미 가입된 이메일")
                     field("password", "password123!", "비밀번호")
                     field("nickname", "새사용자", "닉네임")
+                    field("agreedTermsIds", createRequiredTerms().map { it.id!! }, "동의한 약관 ID 목록")
                 }
             }
             response {
@@ -365,6 +413,7 @@ class UserControllerTest : RestDocsMvcTest() {
                     field("email", "invalid-nickname@pangyeori.com", "인증을 완료한 이메일")
                     field("password", "password123!", "비밀번호")
                     field("nickname", "판결이!", "특수문자가 포함된 닉네임")
+                    field("agreedTermsIds", createRequiredTerms().map { it.id!! }, "동의한 약관 ID 목록")
                 }
             }
             response {
@@ -395,6 +444,7 @@ class UserControllerTest : RestDocsMvcTest() {
                     field("email", "invalid-password@pangyeori.com", "인증을 완료한 이메일")
                     field("password", "password123", "특수문자가 없는 비밀번호")
                     field("nickname", "판결이", "닉네임")
+                    field("agreedTermsIds", createRequiredTerms().map { it.id!! }, "동의한 약관 ID 목록")
                 }
             }
             response {
@@ -409,6 +459,129 @@ class UserControllerTest : RestDocsMvcTest() {
                             field("field", "오류가 발생한 필드")
                             field("message", "필드 오류 메시지")
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `필수 약관에 동의하지 않으면 422를 반환한다`() {
+        val email = "signup-required-terms@pangyeori.com"
+        emailVerificationRedisRepository.markVerified(
+            email = email,
+        )
+        val serviceTerms = createRequiredTerms().first()
+
+        restDocs(mockMvc, "users/create-required-terms-not-agreed") {
+            summary("회원가입")
+            request {
+                post("/api/v1/users")
+                body {
+                    field("email", email, "인증을 완료한 이메일")
+                    field("password", "password123!", "비밀번호")
+                    field("nickname", "판결이", "닉네임")
+                    field("agreedTermsIds", listOf(serviceTerms.id!!), "개인정보 수집·이용 동의가 빠진 약관 ID 목록")
+                }
+            }
+            response {
+                status(422)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "에러 정보") {
+                        field("code", "에러 코드")
+                        field("message", "에러 메시지")
+                        field("details", "필드별 검증 오류").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `최신 버전이 아닌 약관에 동의하면 422를 반환한다`() {
+        val email = "signup-old-terms@pangyeori.com"
+        emailVerificationRedisRepository.markVerified(
+            email = email,
+        )
+        val oldServiceTerms = createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 1,
+            title = "이용약관",
+            required = true,
+        )
+        val latestTerms = listOf(
+            createTerms(
+                type = TermsType.TERMS_OF_SERVICE,
+                version = 2,
+                title = "이용약관",
+                required = true,
+            ),
+            createTerms(
+                type = TermsType.PRIVACY_POLICY,
+                title = "개인정보 수집·이용 동의",
+                required = true,
+            ),
+        )
+
+        restDocs(mockMvc, "users/create-terms-not-latest") {
+            summary("회원가입")
+            request {
+                post("/api/v1/users")
+                body {
+                    field("email", email, "인증을 완료한 이메일")
+                    field("password", "password123!", "비밀번호")
+                    field("nickname", "판결이", "닉네임")
+                    field(
+                        "agreedTermsIds",
+                        listOf(oldServiceTerms.id!!, latestTerms[1].id!!),
+                        "개정 전 버전의 이용약관 ID가 포함된 약관 ID 목록",
+                    )
+                }
+            }
+            response {
+                status(422)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "에러 정보") {
+                        field("code", "에러 코드")
+                        field("message", "에러 메시지")
+                        field("details", "필드별 검증 오류").optional()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `존재하지 않는 약관에 동의하면 404를 반환한다`() {
+        val email = "signup-unknown-terms@pangyeori.com"
+        emailVerificationRedisRepository.markVerified(
+            email = email,
+        )
+
+        restDocs(mockMvc, "users/create-terms-not-found") {
+            summary("회원가입")
+            request {
+                post("/api/v1/users")
+                body {
+                    field("email", email, "인증을 완료한 이메일")
+                    field("password", "password123!", "비밀번호")
+                    field("nickname", "판결이", "닉네임")
+                    field("agreedTermsIds", listOf("0000000000000"), "존재하지 않는 약관 ID가 포함된 약관 ID 목록")
+                }
+            }
+            response {
+                status(404)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "에러 정보") {
+                        field("code", "에러 코드")
+                        field("message", "에러 메시지")
+                        field("details", "필드별 검증 오류").optional()
                     }
                 }
             }
@@ -441,6 +614,7 @@ class UserControllerTest : RestDocsMvcTest() {
                         field("nickname", "사용자 닉네임")
                         field("profileImageKey", "프로필 이미지 키").optional()
                         field("joinedAt", "가입일자")
+                        field("marketingAgreed", "마케팅 수신 동의 여부")
                     }
                     field("error", "오류 정보").optional()
                 }
@@ -474,6 +648,7 @@ class UserControllerTest : RestDocsMvcTest() {
                         field("nickname", "사용자 닉네임")
                         field("profileImageKey", "프로필 이미지 키").optional()
                         field("joinedAt", "가입일자")
+                        field("marketingAgreed", "마케팅 수신 동의 여부")
                     }
                     field("error", "오류 정보").optional()
                 }

@@ -4,6 +4,7 @@ import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.auth.repository.RefreshTokenRepository
 import com.debate.pangyeori.common.util.mapStorageFailure
 import com.debate.pangyeori.storage.client.ObjectStorage
+import com.debate.pangyeori.terms.service.TermsAgreementService
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.dto.response.NicknameDuplicateResponse
 import com.debate.pangyeori.user.dto.response.UserResponse
@@ -22,6 +23,7 @@ class UserService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val objectStorage: ObjectStorage,
     private val passwordEncoder: PasswordEncoder,
+    private val termsAgreementService: TermsAgreementService,
 ) {
 
     private val logger = KotlinLogging.logger {}
@@ -31,6 +33,7 @@ class UserService(
         email: String,
         password: String,
         nickname: String,
+        agreedTermsIds: List<String>,
     ) {
         val normalizedEmail = email.trim().lowercase()
         val normalizedNickname = nickname.trim()
@@ -61,7 +64,11 @@ class UserService(
             password = passwordEncoder.encode(password)!!,
             nickname = normalizedNickname,
         )
-        userRepository.save(user)
+        val savedUser = userRepository.save(user)
+        termsAgreementService.agreeAtSignUp(
+            user = savedUser,
+            agreedTermsIds = agreedTermsIds,
+        )
         mapStorageFailure(logger, "이메일 인증") {
             emailVerificationRedisRepository.clearVerified(
                 email = normalizedEmail,
@@ -88,6 +95,9 @@ class UserService(
 
         return UserResponse.from(
             user = user,
+            marketingAgreed = termsAgreementService.isMarketingAgreed(
+                userId = user.id!!,
+            ),
         )
     }
 
@@ -128,6 +138,9 @@ class UserService(
 
         return UserResponse.from(
             user = user,
+            marketingAgreed = termsAgreementService.isMarketingAgreed(
+                userId = user.id!!,
+            ),
         )
     }
 

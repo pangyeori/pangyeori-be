@@ -34,6 +34,12 @@ enum class ErrorCode(
     EMAIL_NOT_VERIFIED(HttpStatus.UNPROCESSABLE_ENTITY, "이메일 인증이 완료되지 않았습니다."),
     INVALID_CURRENT_PASSWORD(HttpStatus.UNPROCESSABLE_ENTITY, "현재 비밀번호가 올바르지 않습니다."),
 
+    // 약관
+    TERMS_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 약관입니다."),
+    TERMS_NOT_LATEST(HttpStatus.UNPROCESSABLE_ENTITY, "최신 버전의 약관이 아닙니다."),
+    REQUIRED_TERMS_NOT_AGREED(HttpStatus.UNPROCESSABLE_ENTITY, "필수 약관에 모두 동의해야 합니다."),
+    REQUIRED_TERMS_WITHDRAWAL_NOT_ALLOWED(HttpStatus.UNPROCESSABLE_ENTITY, "필수 약관의 동의는 철회할 수 없습니다."),
+
     // 인증
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다."),

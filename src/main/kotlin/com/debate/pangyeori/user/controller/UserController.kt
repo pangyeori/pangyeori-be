@@ -52,6 +52,7 @@ class UserController(
             email = request.email!!,
             password = request.password!!,
             nickname = request.nickname!!,
+            agreedTermsIds = request.agreedTermsIds!!,
         )
 
         return ResponseEntity.status(HttpStatus.CREATED).build()
