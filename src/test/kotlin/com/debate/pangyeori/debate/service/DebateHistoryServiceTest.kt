@@ -214,4 +214,139 @@ class DebateHistoryServiceTest : BehaviorSpec({
             }
         }
     }
+    Given("논박 발언을 진행하면") {
+        val turns = listOf(
+            Triple(DebateStage.REBUTTAL_PROS, DebatePosition.PROS, DebateStage.REBUTTAL_CONS),
+            Triple(DebateStage.REBUTTAL_CONS, DebatePosition.CONS, DebateStage.VERDICT_2),
+        )
+        for ((stage, position, nextStage) in turns) {
+            When("$stage 단계에서 내 논박을 제출하면") {
+                Then("논박을 기록하고 $nextStage 단계로 전환한다") {
+                    val target = debate(
+                        stage = stage,
+                    )
+                    every { userRepository.findByEmail(hostEmail) } returns
+                        fixtureMonkey.giveMeKotlinBuilder<User>().set(User::id, hostId).sample()
+                    every { debateRepository.findWithLockById(debateId) } returns target
+                    every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns member(
+                        position = position,
+                        role = DebateUserRole.HOST,
+                    )
+                    every { debateHistoryRepository.findByDebateIdAndStage(debateId, stage) } returns null
+                    every { debateHistoryRepository.save(any()) } answers {
+                        firstArg<DebateHistory>().stage shouldBe stage
+                        setAuditFields(
+                            entity = fixtureMonkey.giveMeKotlinBuilder<DebateHistory>()
+                                .set(DebateHistory::id, "0000000000099")
+                                .set(DebateHistory::stage, stage)
+                                .set(DebateHistory::content, "상대방의 주장에 반박합니다")
+                                .sample(),
+                            createdAt = now,
+                        )
+                    }
+
+                    service.submit(
+                        debateId = debateId,
+                        userEmail = hostEmail,
+                        content = "상대방의 주장에 반박합니다",
+                    )
+
+                    target.currentStage shouldBe nextStage
+                    verify(exactly = 1) {
+                        eventPublisher.publishEvent(match<DebateHistoryRecordedEvent> {
+                            it.stage == stage && it.content == "상대방의 주장에 반박합니다"
+                        })
+                        eventPublisher.publishEvent(match<DebateStageChangedEvent> { it.stage == nextStage })
+                    }
+                }
+            }
+
+            When("$stage 단계에서 상대방이 제출하면") {
+                Then("턴 외 제출을 거부한다") {
+                    every { userRepository.findByEmail(hostEmail) } returns
+                        fixtureMonkey.giveMeKotlinBuilder<User>().set(User::id, hostId).sample()
+                    every { debateRepository.findWithLockById(debateId) } returns debate(
+                        stage = stage,
+                    )
+                    every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns member(
+                        position = if (position == DebatePosition.PROS) DebatePosition.CONS else DebatePosition.PROS,
+                        role = DebateUserRole.HOST,
+                    )
+
+                    shouldThrow<DebateNotYourTurnException> {
+                        service.submit(
+                            debateId = debateId,
+                            userEmail = hostEmail,
+                            content = "턴 외 논박",
+                        )
+                    }
+                    verify(exactly = 0) { debateHistoryRepository.save(any()) }
+                }
+            }
+
+            When("$stage 단계의 논박이 이미 기록되어 있으면") {
+                Then("중복 제출을 거부한다") {
+                    every { userRepository.findByEmail(hostEmail) } returns
+                        fixtureMonkey.giveMeKotlinBuilder<User>().set(User::id, hostId).sample()
+                    every { debateRepository.findWithLockById(debateId) } returns debate(
+                        stage = stage,
+                    )
+                    every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns member(
+                        position = position,
+                        role = DebateUserRole.HOST,
+                    )
+                    every { debateHistoryRepository.findByDebateIdAndStage(debateId, stage) } returns
+                        fixtureMonkey.giveMeKotlinBuilder<DebateHistory>().sample()
+
+                    shouldThrow<DebateHistoryAlreadySubmittedException> {
+                        service.submit(
+                            debateId = debateId,
+                            userEmail = hostEmail,
+                            content = "중복 논박",
+                        )
+                    }
+                    verify(exactly = 0) { debateHistoryRepository.save(any()) }
+                }
+            }
+
+            When("$stage 단계의 제한 시간이 지나면") {
+                Then("무응답을 기록하고 $nextStage 단계로 전환한다") {
+                    val target = debate(
+                        stage = stage,
+                        currentStageStartedAt = now.minusSeconds(120),
+                        turnTimeSeconds = 60,
+                    )
+                    every { debateRepository.findWithLockById(debateId) } returns target
+                    every { debateHistoryRepository.findByDebateIdAndStage(debateId, stage) } returns null
+                    every { debateUserRepository.findByDebateIdAndPosition(debateId, position) } returns member(
+                        position = position,
+                        role = DebateUserRole.HOST,
+                    )
+                    every { debateHistoryRepository.save(any()) } answers {
+                        firstArg<DebateHistory>().content shouldBe null
+                        setAuditFields(
+                            entity = fixtureMonkey.giveMeKotlinBuilder<DebateHistory>()
+                                .set(DebateHistory::id, "0000000000099")
+                                .set(DebateHistory::stage, stage)
+                                .set(DebateHistory::content, null)
+                                .sample(),
+                            createdAt = now,
+                        )
+                    }
+
+                    service.forceAdvanceIfOverdue(
+                        debateId = debateId,
+                    )
+
+                    target.currentStage shouldBe nextStage
+                    verify(exactly = 1) {
+                        eventPublisher.publishEvent(match<DebateHistoryRecordedEvent> {
+                            it.stage == stage && it.content == null
+                        })
+                        eventPublisher.publishEvent(match<DebateStageChangedEvent> { it.stage == nextStage })
+                    }
+                }
+            }
+        }
+    }
 })
