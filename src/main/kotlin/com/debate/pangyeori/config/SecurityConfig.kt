@@ -104,6 +104,7 @@ class SecurityConfig {
             "/actuator/health",
             "/docs/**",
             "/api/v1/users/nickname/duplicate",
+            "/api/v1/terms",
             "/api/v1/debates/*/status/stream",
             "/ws",
         )

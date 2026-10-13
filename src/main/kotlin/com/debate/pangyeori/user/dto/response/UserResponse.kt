@@ -9,16 +9,19 @@ data class UserResponse(
     val nickname: String,
     val profileImageKey: String?,
     val joinedAt: LocalDateTime,
+    val marketingAgreed: Boolean,
 ) {
     companion object {
         fun from(
             user: User,
+            marketingAgreed: Boolean,
         ) = UserResponse(
             id = user.id!!,
             email = user.email,
             nickname = user.nickname,
             profileImageKey = user.profileImageKey,
             joinedAt = user.createdAt!!,
+            marketingAgreed = marketingAgreed,
         )
     }
 }
