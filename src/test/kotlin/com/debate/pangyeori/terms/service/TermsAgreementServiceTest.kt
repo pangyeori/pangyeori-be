@@ -454,16 +454,15 @@ class TermsAgreementServiceTest : BehaviorSpec({
     }
 
     Given("재동의가 필요한 약관 목록을 조회하면") {
-        fun stubAgreed(
-            termsId: String,
-            agreed: Boolean,
+        fun stubPendingIds(
+            vararg ids: String,
         ) {
             every {
-                userTermsAgreementRepository.existsByUserIdAndTermsIdAndWithdrawnAtIsNull(
-                    userId = userId,
-                    termsId = termsId,
+                termsRepository.findPendingRequiredIds(
+                    email = email,
+                    currentTime = any(),
                 )
-            } returns agreed
+            } returns ids.toList()
         }
 
         When("사용자가 존재하지 않으면") {
@@ -482,16 +481,17 @@ class TermsAgreementServiceTest : BehaviorSpec({
             }
         }
 
-        When("최신 필수 약관에 모두 동의했으면") {
+        When("동의하지 않은 최신 필수 약관이 없으면") {
             Then("빈 목록을 반환한다") {
                 every {
                     userRepository.findByEmail(
                         email = email,
                     )
                 } returns user()
-                stubLatestTerms(serviceTerms(), privacyTerms(), marketingTerms())
-                stubAgreed(serviceTermsId, true)
-                stubAgreed(privacyTermsId, true)
+                stubPendingIds()
+                every {
+                    termsRepository.findAllById(emptyList<String>())
+                } returns emptyList()
 
                 termsAgreementService.getPendingTerms(
                     email = email,
@@ -499,16 +499,17 @@ class TermsAgreementServiceTest : BehaviorSpec({
             }
         }
 
-        When("개정된 최신 필수 약관에 동의하지 않았으면") {
-            Then("동의하지 않은 필수 약관만 TermsType 선언 순서대로 반환한다") {
+        When("동의하지 않은 최신 필수 약관이 여러 개 있으면") {
+            Then("TermsType 선언 순서대로 반환한다") {
                 every {
                     userRepository.findByEmail(
                         email = email,
                     )
                 } returns user()
-                stubLatestTerms(marketingTerms(), privacyTerms(), serviceTerms())
-                stubAgreed(serviceTermsId, false)
-                stubAgreed(privacyTermsId, false)
+                stubPendingIds(privacyTermsId, serviceTermsId)
+                every {
+                    termsRepository.findAllById(listOf(privacyTermsId, serviceTermsId))
+                } returns listOf(privacyTerms(), serviceTerms())
 
                 val response = termsAgreementService.getPendingTerms(
                     email = email,
@@ -517,20 +518,121 @@ class TermsAgreementServiceTest : BehaviorSpec({
                 response.map { it.termsId } shouldBe listOf(serviceTermsId, privacyTermsId)
             }
         }
+    }
 
-        When("선택 약관에 동의하지 않았으면") {
-            Then("선택 약관은 반환하지 않는다") {
+    Given("여러 약관에 한 번에 동의하면") {
+        When("사용자가 존재하지 않으면") {
+            Then("UserNotFoundException을 던진다") {
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns null
+
+                shouldThrow<UserNotFoundException> {
+                    termsAgreementService.agreeTerms(
+                        email = email,
+                        termsIds = listOf(serviceTermsId),
+                    )
+                }
+            }
+        }
+
+        When("존재하지 않는 약관 id가 포함되어 있으면") {
+            Then("TermsNotFoundException을 던진다") {
                 every {
                     userRepository.findByEmail(
                         email = email,
                     )
                 } returns user()
-                stubLatestTerms(serviceTerms(), marketingTerms())
-                stubAgreed(serviceTermsId, true)
+                every {
+                    termsRepository.findAllById(listOf(serviceTermsId, privacyTermsId))
+                } returns listOf(serviceTerms())
 
-                termsAgreementService.getPendingTerms(
+                shouldThrow<TermsNotFoundException> {
+                    termsAgreementService.agreeTerms(
+                        email = email,
+                        termsIds = listOf(serviceTermsId, privacyTermsId),
+                    )
+                }
+                verify(exactly = 0) {
+                    userTermsAgreementRepository.save(any())
+                }
+            }
+        }
+
+        When("최신 버전이 아닌 약관이 포함되어 있으면") {
+            Then("TermsNotLatestException을 던진다") {
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user()
+                every {
+                    termsRepository.findAllById(listOf(serviceTermsId))
+                } returns listOf(serviceTerms())
+                stubLatestTerms(privacyTerms())
+
+                shouldThrow<TermsNotLatestException> {
+                    termsAgreementService.agreeTerms(
+                        email = email,
+                        termsIds = listOf(serviceTermsId),
+                    )
+                }
+                verify(exactly = 0) {
+                    userTermsAgreementRepository.save(any())
+                }
+            }
+        }
+
+        When("동의 이력이 없는 약관과 철회했던 약관이 섞여 있으면") {
+            Then("새 동의 이력을 저장하고 철회했던 이력의 철회 시각을 비운다") {
+                val user = user()
+                val service = serviceTerms()
+                val marketing = marketingTerms()
+                val withdrawn = agreement(
+                    user = user,
+                    terms = marketing,
+                    withdrawn = true,
+                ).also {
+                    it.withdraw()
+                }
+                val agreementSlot = slot<UserTermsAgreement>()
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user
+                every {
+                    termsRepository.findAllById(listOf(serviceTermsId, marketingTermsId))
+                } returns listOf(service, marketing)
+                stubLatestTerms(service, marketing)
+                every {
+                    userTermsAgreementRepository.findByUserIdAndTermsId(
+                        userId = userId,
+                        termsId = serviceTermsId,
+                    )
+                } returns null
+                every {
+                    userTermsAgreementRepository.findByUserIdAndTermsId(
+                        userId = userId,
+                        termsId = marketingTermsId,
+                    )
+                } returns withdrawn
+                every {
+                    userTermsAgreementRepository.save(capture(agreementSlot))
+                } answers { firstArg() }
+
+                termsAgreementService.agreeTerms(
                     email = email,
-                ) shouldBe emptyList()
+                    termsIds = listOf(serviceTermsId, marketingTermsId, serviceTermsId),
+                )
+
+                agreementSlot.captured.terms shouldBe service
+                withdrawn.withdrawnAt.shouldBeNull()
+                verify(exactly = 1) {
+                    userTermsAgreementRepository.save(any())
+                }
             }
         }
     }
