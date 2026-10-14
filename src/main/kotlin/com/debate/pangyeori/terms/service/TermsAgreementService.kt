@@ -1,5 +1,6 @@
 package com.debate.pangyeori.terms.service
 
+import com.debate.pangyeori.terms.domain.Terms
 import com.debate.pangyeori.terms.domain.UserTermsAgreement
 import com.debate.pangyeori.terms.domain.enums.TermsType
 import com.debate.pangyeori.terms.dto.response.TermsListResponse
@@ -73,20 +74,10 @@ class TermsAgreementService(
         }
 
         if (agreed) {
-            val agreement = userTermsAgreementRepository.findByUserIdAndTermsId(
-                userId = user.id!!,
-                termsId = termsId,
+            agree(
+                user = user,
+                terms = terms,
             )
-            if (agreement == null) {
-                userTermsAgreementRepository.save(
-                    UserTermsAgreement.create(
-                        user = user,
-                        terms = terms,
-                    ),
-                )
-            } else {
-                agreement.agreeAgain()
-            }
             return
         }
 
@@ -99,6 +90,34 @@ class TermsAgreementService(
         ).forEach { it.withdraw() }
     }
 
+    @Transactional
+    fun agreeTerms(
+        email: String,
+        termsIds: List<String>,
+    ) {
+        val user = userRepository.findByEmail(
+            email = email,
+        ) ?: throw UserNotFoundException()
+        val distinctIds = termsIds.distinct()
+        val targetTerms = termsRepository.findAllById(distinctIds)
+        if (targetTerms.size != distinctIds.size) {
+            throw TermsNotFoundException()
+        }
+        val latestIds = termsRepository.findAllLatestEffective(
+            currentTime = LocalDateTime.now(ZoneOffset.UTC),
+        ).map { it.id!! }.toSet()
+        if (targetTerms.any { it.id !in latestIds }) {
+            throw TermsNotLatestException()
+        }
+
+        targetTerms.forEach {
+            agree(
+                user = user,
+                terms = it,
+            )
+        }
+    }
+
     @Transactional(readOnly = true)
     fun getPendingTerms(
         email: String,
@@ -107,14 +126,12 @@ class TermsAgreementService(
             email = email,
         ) ?: throw UserNotFoundException()
 
-        return termsRepository.findAllLatestEffective(
-            currentTime = LocalDateTime.now(ZoneOffset.UTC),
-        ).filter {
-            it.required && !userTermsAgreementRepository.existsByUserIdAndTermsIdAndWithdrawnAtIsNull(
-                userId = user.id!!,
-                termsId = it.id!!,
-            )
-        }.sortedBy {
+        return termsRepository.findAllById(
+            termsRepository.findPendingRequiredIds(
+                email = user.email,
+                currentTime = LocalDateTime.now(ZoneOffset.UTC),
+            ),
+        ).sortedBy {
             it.type.ordinal
         }.map {
             TermsListResponse.from(
@@ -130,4 +147,24 @@ class TermsAgreementService(
         userId = userId,
         termsType = TermsType.MARKETING,
     )
+
+    private fun agree(
+        user: User,
+        terms: Terms,
+    ) {
+        val agreement = userTermsAgreementRepository.findByUserIdAndTermsId(
+            userId = user.id!!,
+            termsId = terms.id!!,
+        )
+        if (agreement == null) {
+            userTermsAgreementRepository.save(
+                UserTermsAgreement.create(
+                    user = user,
+                    terms = terms,
+                ),
+            )
+        } else {
+            agreement.agreeAgain()
+        }
+    }
 }

@@ -15,11 +15,6 @@ interface UserTermsAgreementRepository : JpaRepository<UserTermsAgreement, Strin
         termsType: TermsType,
     ): List<UserTermsAgreement>
 
-    fun existsByUserIdAndTermsIdAndWithdrawnAtIsNull(
-        userId: String,
-        termsId: String,
-    ): Boolean
-
     fun existsByUserIdAndTermsTypeAndWithdrawnAtIsNull(
         userId: String,
         termsType: TermsType,
