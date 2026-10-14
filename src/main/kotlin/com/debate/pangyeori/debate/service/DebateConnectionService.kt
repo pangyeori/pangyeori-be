@@ -3,6 +3,7 @@ package com.debate.pangyeori.debate.service
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 import com.debate.pangyeori.debate.domain.enums.DebateUserStatus
+import com.debate.pangyeori.debate.dto.response.DebatePresenceResponse
 import com.debate.pangyeori.debate.event.DebateStageChangedEvent
 import com.debate.pangyeori.debate.event.DebateStartedEvent
 import com.debate.pangyeori.debate.event.DebateStatusChangedEvent
@@ -18,6 +19,8 @@ import com.debate.pangyeori.debate.websocket.DebateInstance
 import com.debate.pangyeori.debate.websocket.message.DebateConnectionEvent
 import com.debate.pangyeori.config.SchedulingConfig
 import com.debate.pangyeori.debate.websocket.publisher.RedisDebateConnectionEventPublisher
+import com.debate.pangyeori.user.exception.UserNotFoundException
+import com.debate.pangyeori.user.repository.UserRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.ApplicationEventPublisher
@@ -32,6 +35,7 @@ import java.time.Instant
 class DebateConnectionService(
     private val debateRepository: DebateRepository,
     private val debateUserRepository: DebateUserRepository,
+    private val userRepository: UserRepository,
     private val debatePresenceRedisRepository: DebatePresenceRedisRepository,
     private val debateConnectionEventPublisher: RedisDebateConnectionEventPublisher,
     private val eventPublisher: ApplicationEventPublisher,
@@ -40,6 +44,26 @@ class DebateConnectionService(
     private val debateInstance: DebateInstance,
 ) {
     private val logger = KotlinLogging.logger {}
+
+    @Transactional(readOnly = true)
+    fun getPresence(
+        debateId: String,
+        userEmail: String,
+    ): DebatePresenceResponse {
+        val user = userRepository.findByEmail(
+            email = userEmail,
+        ) ?: throw UserNotFoundException()
+        debateUserRepository.findByDebateIdAndUserId(
+            debateId = debateId,
+            userId = user.id!!,
+        ) ?: throw DebateAccessDeniedException()
+
+        val connectedRoles = debatePresenceRedisRepository.findActiveMembers(debateId).map { it.role }.toSet()
+        return DebatePresenceResponse(
+            hostConnected = DebateUserRole.HOST in connectedRoles,
+            guestConnected = DebateUserRole.GUEST in connectedRoles,
+        )
+    }
 
     @Transactional(readOnly = true)
     fun validateEntry(
