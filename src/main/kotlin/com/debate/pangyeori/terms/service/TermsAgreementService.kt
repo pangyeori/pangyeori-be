@@ -2,6 +2,7 @@ package com.debate.pangyeori.terms.service
 
 import com.debate.pangyeori.terms.domain.UserTermsAgreement
 import com.debate.pangyeori.terms.domain.enums.TermsType
+import com.debate.pangyeori.terms.dto.response.TermsListResponse
 import com.debate.pangyeori.terms.exception.RequiredTermsNotAgreedException
 import com.debate.pangyeori.terms.exception.RequiredTermsWithdrawalNotAllowedException
 import com.debate.pangyeori.terms.exception.TermsNotFoundException
@@ -96,6 +97,30 @@ class TermsAgreementService(
             userId = user.id!!,
             termsType = terms.type,
         ).forEach { it.withdraw() }
+    }
+
+    @Transactional(readOnly = true)
+    fun getPendingTerms(
+        email: String,
+    ): List<TermsListResponse> {
+        val user = userRepository.findByEmail(
+            email = email,
+        ) ?: throw UserNotFoundException()
+
+        return termsRepository.findAllLatestEffective(
+            currentTime = LocalDateTime.now(ZoneOffset.UTC),
+        ).filter {
+            it.required && !userTermsAgreementRepository.existsByUserIdAndTermsIdAndWithdrawnAtIsNull(
+                userId = user.id!!,
+                termsId = it.id!!,
+            )
+        }.sortedBy {
+            it.type.ordinal
+        }.map {
+            TermsListResponse.from(
+                terms = it,
+            )
+        }
     }
 
     @Transactional(readOnly = true)
