@@ -453,6 +453,88 @@ class TermsAgreementServiceTest : BehaviorSpec({
         }
     }
 
+    Given("재동의가 필요한 약관 목록을 조회하면") {
+        fun stubAgreed(
+            termsId: String,
+            agreed: Boolean,
+        ) {
+            every {
+                userTermsAgreementRepository.existsByUserIdAndTermsIdAndWithdrawnAtIsNull(
+                    userId = userId,
+                    termsId = termsId,
+                )
+            } returns agreed
+        }
+
+        When("사용자가 존재하지 않으면") {
+            Then("UserNotFoundException을 던진다") {
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns null
+
+                shouldThrow<UserNotFoundException> {
+                    termsAgreementService.getPendingTerms(
+                        email = email,
+                    )
+                }
+            }
+        }
+
+        When("최신 필수 약관에 모두 동의했으면") {
+            Then("빈 목록을 반환한다") {
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user()
+                stubLatestTerms(serviceTerms(), privacyTerms(), marketingTerms())
+                stubAgreed(serviceTermsId, true)
+                stubAgreed(privacyTermsId, true)
+
+                termsAgreementService.getPendingTerms(
+                    email = email,
+                ) shouldBe emptyList()
+            }
+        }
+
+        When("개정된 최신 필수 약관에 동의하지 않았으면") {
+            Then("동의하지 않은 필수 약관만 TermsType 선언 순서대로 반환한다") {
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user()
+                stubLatestTerms(marketingTerms(), privacyTerms(), serviceTerms())
+                stubAgreed(serviceTermsId, false)
+                stubAgreed(privacyTermsId, false)
+
+                val response = termsAgreementService.getPendingTerms(
+                    email = email,
+                )
+
+                response.map { it.termsId } shouldBe listOf(serviceTermsId, privacyTermsId)
+            }
+        }
+
+        When("선택 약관에 동의하지 않았으면") {
+            Then("선택 약관은 반환하지 않는다") {
+                every {
+                    userRepository.findByEmail(
+                        email = email,
+                    )
+                } returns user()
+                stubLatestTerms(serviceTerms(), marketingTerms())
+                stubAgreed(serviceTermsId, true)
+
+                termsAgreementService.getPendingTerms(
+                    email = email,
+                ) shouldBe emptyList()
+            }
+        }
+    }
+
     Given("마케팅 수신 동의 여부를 조회하면") {
         When("철회하지 않은 마케팅 동의 이력이 있으면") {
             Then("true를 반환한다") {

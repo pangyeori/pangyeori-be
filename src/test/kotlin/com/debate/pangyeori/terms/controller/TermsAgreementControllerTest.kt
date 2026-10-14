@@ -78,6 +78,75 @@ class TermsAgreementControllerTest : RestDocsMvcTest() {
     }
 
     @Test
+    fun `개정된 필수 약관에 동의하지 않았으면 재동의가 필요한 약관으로 조회된다`() {
+        val email = "pending-terms@pangyeori.com"
+        val user = createUser(
+            email = email,
+        )
+        val oldService = createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 1,
+            title = "이용약관",
+            required = true,
+        )
+        createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 2,
+            title = "이용약관",
+            required = true,
+        )
+        userTermsAgreementRepository.save(
+            UserTermsAgreement.create(
+                user = user,
+                terms = oldService,
+            ),
+        )
+        val accessToken = issueAccessToken(
+            email = email,
+        )
+
+        restDocs(mockMvc, "terms-agreements/get-pending") {
+            summary("재동의가 필요한 약관 목록 조회")
+            tag("Terms")
+            request {
+                get("/api/v1/users/me/term-agreements/pending")
+                header("Authorization", "Bearer $accessToken")
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    array("data", "동의하지 않은 최신 필수 약관 목록. 이용약관이 v2로 개정되어 v1에만 동의한 경우 v2가 내려온다") {
+                        field("termsId", "약관 ID")
+                        field("type", "약관 종류 (TERMS_OF_SERVICE, PRIVACY_POLICY, MARKETING)")
+                        field("version", "약관 버전")
+                        field("title", "약관 제목")
+                        field("content", "약관 본문 (Markdown)")
+                        field("required", "필수 동의 여부")
+                        field("effectiveAt", "시행일")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `인증 없이 재동의가 필요한 약관을 조회하면 401을 반환한다`() {
+        restDocs(mockMvc, "terms-agreements/get-pending-unauthorized") {
+            summary("재동의가 필요한 약관 목록 조회")
+            tag("Terms")
+            request {
+                get("/api/v1/users/me/term-agreements/pending")
+            }
+            response {
+                status(401)
+                body(errorBody)
+            }
+        }
+    }
+
+    @Test
     fun `마케팅 수신에 동의한다`() {
         val email = "agree-marketing@pangyeori.com"
         createUser(
