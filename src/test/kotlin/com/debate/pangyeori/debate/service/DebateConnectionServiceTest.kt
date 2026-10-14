@@ -19,6 +19,8 @@ import com.debate.pangyeori.debate.websocket.DebateInstance
 import com.debate.pangyeori.debate.websocket.message.DebateConnectionEvent
 import com.debate.pangyeori.debate.websocket.publisher.RedisDebateConnectionEventPublisher
 import com.debate.pangyeori.user.domain.User
+import com.debate.pangyeori.user.exception.UserNotFoundException
+import com.debate.pangyeori.user.repository.UserRepository
 import com.navercorp.fixturemonkey.FixtureMonkey
 import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
 import com.navercorp.fixturemonkey.kotlin.giveMeKotlinBuilder
@@ -40,6 +42,7 @@ import java.util.Optional
 class DebateConnectionServiceTest : BehaviorSpec({
     val debateRepository = mockk<DebateRepository>()
     val debateUserRepository = mockk<DebateUserRepository>()
+    val userRepository = mockk<UserRepository>()
     val presenceRepository = mockk<DebatePresenceRedisRepository>(relaxed = true)
     val eventPublisher = mockk<ApplicationEventPublisher>(relaxed = true)
     val roomEventPublisher = mockk<RedisDebateConnectionEventPublisher>(relaxed = true)
@@ -48,6 +51,7 @@ class DebateConnectionServiceTest : BehaviorSpec({
     val service = DebateConnectionService(
         debateRepository = debateRepository,
         debateUserRepository = debateUserRepository,
+        userRepository = userRepository,
         debatePresenceRedisRepository = presenceRepository,
         debateConnectionEventPublisher = roomEventPublisher,
         eventPublisher = eventPublisher,
@@ -62,6 +66,7 @@ class DebateConnectionServiceTest : BehaviorSpec({
     val debateId = "0000000000001"
     val hostId = "0000000000002"
     val guestId = "0000000000003"
+    val hostEmail = "host@pangyeori.com"
     val sessionId = "session-1"
     val instanceId = "instance-1"
 
@@ -69,6 +74,7 @@ class DebateConnectionServiceTest : BehaviorSpec({
         clearMocks(
             debateRepository,
             debateUserRepository,
+            userRepository,
             presenceRepository,
             eventPublisher,
             roomEventPublisher,
@@ -92,6 +98,63 @@ class DebateConnectionServiceTest : BehaviorSpec({
         .set(DebateUser::status, status)
         .set(DebateUser::disconnectCount, disconnectCount)
         .sample()
+
+    fun user(userId: String) = fixtureMonkey.giveMeKotlinBuilder<User>()
+        .set(User::id, userId)
+        .sample()
+
+    Given("상대방 입장 여부를 조회할 때") {
+        When("존재하지 않는 사용자이면") {
+            Then("UserNotFoundException을 던진다") {
+                every { userRepository.findByEmail(hostEmail) } returns null
+
+                shouldThrow<UserNotFoundException> {
+                    service.getPresence(debateId, hostEmail)
+                }
+            }
+        }
+
+        When("토론 참여자가 아니면") {
+            Then("DebateAccessDeniedException을 던진다") {
+                every { userRepository.findByEmail(hostEmail) } returns user(hostId)
+                every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns null
+
+                shouldThrow<DebateAccessDeniedException> {
+                    service.getPresence(debateId, hostEmail)
+                }
+            }
+        }
+
+        When("상대방만 입장해 있으면") {
+            Then("상대방만 접속 중으로 응답한다") {
+                every { userRepository.findByEmail(hostEmail) } returns user(hostId)
+                every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns
+                    member(hostId, DebateUserRole.HOST)
+                every { presenceRepository.findActiveMembers(debateId) } returns listOf(
+                    Member(guestId, DebateUserRole.GUEST, instanceId),
+                )
+
+                val response = service.getPresence(debateId, hostEmail)
+
+                response.hostConnected shouldBe false
+                response.guestConnected shouldBe true
+            }
+        }
+
+        When("아무도 입장해 있지 않으면") {
+            Then("양쪽 모두 접속 중이 아니라고 응답한다") {
+                every { userRepository.findByEmail(hostEmail) } returns user(hostId)
+                every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns
+                    member(hostId, DebateUserRole.HOST)
+                every { presenceRepository.findActiveMembers(debateId) } returns emptyList()
+
+                val response = service.getPresence(debateId, hostEmail)
+
+                response.hostConnected shouldBe false
+                response.guestConnected shouldBe false
+            }
+        }
+    }
 
     Given("입장 검사를 할 때") {
         When("토론 참여자가 아니면") {
