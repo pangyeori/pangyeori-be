@@ -2,8 +2,12 @@ package com.debate.pangyeori.terms.repository
 
 import com.debate.pangyeori.support.containers.TestContainersInitializer
 import com.debate.pangyeori.terms.domain.Terms
+import com.debate.pangyeori.terms.domain.UserTermsAgreement
 import com.debate.pangyeori.terms.domain.enums.TermsType
+import com.debate.pangyeori.user.domain.User
+import com.debate.pangyeori.user.repository.UserRepository
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.shouldBe
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -20,6 +24,12 @@ class TermsRepositoryTest {
 
     @Autowired
     private lateinit var termsRepository: TermsRepository
+
+    @Autowired
+    private lateinit var userRepository: UserRepository
+
+    @Autowired
+    private lateinit var userTermsAgreementRepository: UserTermsAgreementRepository
 
     @Autowired
     private lateinit var entityManager: EntityManager
@@ -106,5 +116,160 @@ class TermsRepositoryTest {
         )
 
         result.map { it.id } shouldContainExactly listOf(previousService.id)
+    }
+
+    private fun createUser(
+        email: String,
+    ) = userRepository.save(
+        User.create(
+            email = email,
+            password = "encoded-password",
+            nickname = email.substringBefore("@"),
+        ),
+    )
+
+    private fun agree(
+        user: User,
+        terms: Terms,
+    ) = userTermsAgreementRepository.save(
+        UserTermsAgreement.create(
+            user = user,
+            terms = terms,
+        ),
+    )
+
+    @Test
+    fun `개정된 최신 필수 약관 중 동의하지 않은 약관만 조회한다`() {
+        val user = createUser(
+            email = "pending-user@pangyeori.com",
+        )
+        val oldService = createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 1,
+        )
+        val latestService = createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 2,
+        )
+        val privacy = createTerms(
+            type = TermsType.PRIVACY_POLICY,
+            version = 1,
+        )
+        createTerms(
+            type = TermsType.MARKETING,
+            version = 1,
+        )
+        agree(
+            user = user,
+            terms = oldService,
+        )
+        agree(
+            user = user,
+            terms = privacy,
+        )
+
+        val result = termsRepository.findPendingRequiredIds(
+            email = user.email,
+            currentTime = now(),
+        )
+
+        result shouldContainExactly listOf(latestService.id)
+    }
+
+    @Test
+    fun `최신 필수 약관에 모두 동의했으면 아무것도 조회하지 않는다`() {
+        val user = createUser(
+            email = "agreed-user@pangyeori.com",
+        )
+        val service = createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 1,
+        )
+        agree(
+            user = user,
+            terms = service,
+        )
+
+        val result = termsRepository.findPendingRequiredIds(
+            email = user.email,
+            currentTime = now(),
+        )
+
+        result shouldBe emptyList()
+    }
+
+    @Test
+    fun `철회한 동의는 동의하지 않은 것으로 본다`() {
+        val user = createUser(
+            email = "withdrawn-user@pangyeori.com",
+        )
+        val service = createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 1,
+        )
+        agree(
+            user = user,
+            terms = service,
+        ).withdraw()
+        entityManager.flush()
+
+        val result = termsRepository.findPendingRequiredIds(
+            email = user.email,
+            currentTime = now(),
+        )
+
+        result shouldContainExactly listOf(service.id)
+    }
+
+    @Test
+    fun `시행일이 지나지 않은 개정 약관은 조회하지 않는다`() {
+        val user = createUser(
+            email = "future-terms-user@pangyeori.com",
+        )
+        val service = createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 1,
+        )
+        createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 2,
+            effectiveAt = now().plusDays(7),
+        )
+        agree(
+            user = user,
+            terms = service,
+        )
+
+        val result = termsRepository.findPendingRequiredIds(
+            email = user.email,
+            currentTime = now(),
+        )
+
+        result shouldBe emptyList()
+    }
+
+    @Test
+    fun `다른 사용자의 동의는 영향을 주지 않는다`() {
+        val user = createUser(
+            email = "no-agreement-user@pangyeori.com",
+        )
+        val other = createUser(
+            email = "other-user@pangyeori.com",
+        )
+        val service = createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 1,
+        )
+        agree(
+            user = other,
+            terms = service,
+        )
+
+        val result = termsRepository.findPendingRequiredIds(
+            email = user.email,
+            currentTime = now(),
+        )
+
+        result shouldContainExactly listOf(service.id)
     }
 }

@@ -78,6 +78,252 @@ class TermsAgreementControllerTest : RestDocsMvcTest() {
     }
 
     @Test
+    fun `개정된 필수 약관에 동의하지 않았으면 재동의가 필요한 약관으로 조회된다`() {
+        val email = "pending-terms@pangyeori.com"
+        val user = createUser(
+            email = email,
+        )
+        val oldService = createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 1,
+            title = "이용약관",
+            required = true,
+        )
+        createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 2,
+            title = "이용약관",
+            required = true,
+        )
+        userTermsAgreementRepository.save(
+            UserTermsAgreement.create(
+                user = user,
+                terms = oldService,
+            ),
+        )
+        val accessToken = issueAccessToken(
+            email = email,
+        )
+
+        restDocs(mockMvc, "terms-agreements/get-pending") {
+            summary("재동의가 필요한 약관 목록 조회")
+            tag("Terms")
+            request {
+                get("/api/v1/users/me/term-agreements/pending")
+                header("Authorization", "Bearer $accessToken")
+            }
+            response {
+                status(200)
+                body {
+                    field("success", "처리 성공 여부")
+                    array("data", "동의하지 않은 최신 필수 약관 목록. 이용약관이 v2로 개정되어 v1에만 동의한 경우 v2가 내려온다") {
+                        field("termsId", "약관 ID")
+                        field("type", "약관 종류 (TERMS_OF_SERVICE, PRIVACY_POLICY, MARKETING)")
+                        field("version", "약관 버전")
+                        field("title", "약관 제목")
+                        field("content", "약관 본문 (Markdown)")
+                        field("required", "필수 동의 여부")
+                        field("effectiveAt", "시행일")
+                    }
+                    field("error", "오류 정보").optional()
+                }
+            }
+        }
+    }
+
+    private fun createUserWithPendingTerms(
+        email: String,
+    ): String {
+        val user = createUser(
+            email = email,
+        )
+        val oldService = createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 1,
+            title = "이용약관",
+            required = true,
+        )
+        createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 2,
+            title = "이용약관",
+            required = true,
+        )
+        userTermsAgreementRepository.save(
+            UserTermsAgreement.create(
+                user = user,
+                terms = oldService,
+            ),
+        )
+
+        return issueAccessToken(
+            email = email,
+        )
+    }
+
+    @Test
+    fun `개정된 필수 약관과 선택 약관에 한 번에 동의한다`() {
+        val accessToken = createUserWithPendingTerms(
+            email = "agree-all@pangyeori.com",
+        )
+        val latestTermsIds = termsRepository.findAllLatestEffective(
+            currentTime = LocalDateTime.now(ZoneOffset.UTC),
+        ).map { it.id!! }
+
+        restDocs(mockMvc, "terms-agreements/agree-all") {
+            summary("약관 일괄 동의")
+            tag("Terms")
+            request {
+                post("/api/v1/users/me/term-agreements")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("termsIds", latestTermsIds, "동의할 약관 ID 목록. 사용자에게 보여준 최신 버전 약관의 ID를 보낸다")
+                }
+            }
+            response {
+                status(204)
+            }
+        }
+    }
+
+    @Test
+    fun `최신 버전이 아닌 약관을 포함해 일괄 동의하면 422를 반환한다`() {
+        val email = "agree-all-old@pangyeori.com"
+        createUser(
+            email = email,
+        )
+        val oldService = createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 1,
+            title = "이용약관",
+            required = true,
+        )
+        createTerms(
+            type = TermsType.TERMS_OF_SERVICE,
+            version = 2,
+            title = "이용약관",
+            required = true,
+        )
+        val accessToken = issueAccessToken(
+            email = email,
+        )
+
+        restDocs(mockMvc, "terms-agreements/agree-all-not-latest") {
+            summary("약관 일괄 동의")
+            tag("Terms")
+            request {
+                post("/api/v1/users/me/term-agreements")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("termsIds", listOf(oldService.id!!), "개정 전 버전의 약관 ID가 포함된 요청")
+                }
+            }
+            response {
+                status(422)
+                body(errorBody)
+            }
+        }
+    }
+
+    @Test
+    fun `존재하지 않는 약관을 포함해 일괄 동의하면 404를 반환한다`() {
+        val email = "agree-all-unknown@pangyeori.com"
+        createUser(
+            email = email,
+        )
+        val accessToken = issueAccessToken(
+            email = email,
+        )
+
+        restDocs(mockMvc, "terms-agreements/agree-all-not-found") {
+            summary("약관 일괄 동의")
+            tag("Terms")
+            request {
+                post("/api/v1/users/me/term-agreements")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    field("termsIds", listOf("0000000000000"), "존재하지 않는 약관 ID가 포함된 요청")
+                }
+            }
+            response {
+                status(404)
+                body(errorBody)
+            }
+        }
+    }
+
+    @Test
+    fun `동의할 약관 목록이 비어 있으면 400을 반환한다`() {
+        val email = "agree-all-empty@pangyeori.com"
+        createUser(
+            email = email,
+        )
+        val accessToken = issueAccessToken(
+            email = email,
+        )
+
+        restDocs(mockMvc, "terms-agreements/agree-all-invalid-input") {
+            summary("약관 일괄 동의")
+            tag("Terms")
+            request {
+                post("/api/v1/users/me/term-agreements")
+                header("Authorization", "Bearer $accessToken")
+                body {
+                    rawJson("""{"termsIds": []}""")
+                }
+            }
+            response {
+                status(400)
+                body {
+                    field("success", "처리 성공 여부")
+                    field("data", "응답 데이터").optional()
+                    obj("error", "에러 정보") {
+                        field("code", "에러 코드")
+                        field("message", "에러 메시지")
+                        array("details", "필드별 검증 오류 목록") {
+                            field("field", "오류가 발생한 필드")
+                            field("message", "필드 오류 메시지")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `인증 없이 약관을 일괄 동의하면 401을 반환한다`() {
+        restDocs(mockMvc, "terms-agreements/agree-all-unauthorized") {
+            summary("약관 일괄 동의")
+            tag("Terms")
+            request {
+                post("/api/v1/users/me/term-agreements")
+                body {
+                    field("termsIds", listOf("0000000000000"), "동의할 약관 ID 목록")
+                }
+            }
+            response {
+                status(401)
+                body(errorBody)
+            }
+        }
+    }
+
+    @Test
+    fun `인증 없이 재동의가 필요한 약관을 조회하면 401을 반환한다`() {
+        restDocs(mockMvc, "terms-agreements/get-pending-unauthorized") {
+            summary("재동의가 필요한 약관 목록 조회")
+            tag("Terms")
+            request {
+                get("/api/v1/users/me/term-agreements/pending")
+            }
+            response {
+                status(401)
+                body(errorBody)
+            }
+        }
+    }
+
+    @Test
     fun `마케팅 수신에 동의한다`() {
         val email = "agree-marketing@pangyeori.com"
         createUser(
