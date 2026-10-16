@@ -3,6 +3,7 @@ package com.debate.pangyeori.debate.event.handler
 import com.debate.pangyeori.config.SchedulingConfig
 import com.debate.pangyeori.debate.domain.enums.DebateStage
 import com.debate.pangyeori.debate.event.DebateStageChangedEvent
+import com.debate.pangyeori.debate.service.DebateFreeMessageService
 import com.debate.pangyeori.debate.service.DebateHistoryService
 import com.debate.pangyeori.debate.service.DebateVerdictService
 import com.debate.pangyeori.debate.websocket.message.DebateConnectionEvent
@@ -21,6 +22,7 @@ class DebateStageChangedEventHandler(
     private val debateConnectionEventPublisher: RedisDebateConnectionEventPublisher,
     private val debateHistoryService: DebateHistoryService,
     private val debateVerdictService: DebateVerdictService,
+    private val debateFreeMessageService: DebateFreeMessageService,
     @param:Qualifier(SchedulingConfig.DEBATE_CONNECTION_SCHEDULER) private val taskScheduler: TaskScheduler,
     @param:Qualifier(SchedulingConfig.DEBATE_VERDICT_EXECUTOR) private val verdictExecutor: TaskExecutor,
 ) {
@@ -46,7 +48,7 @@ class DebateStageChangedEventHandler(
         if (isTimedStage(event.stage) && event.turnEndsAt != null) {
             runCatching {
                 taskScheduler.schedule(
-                    { debateHistoryService.forceAdvanceIfOverdue(debateId = event.debateId) },
+                    { forceAdvanceByStage(debateId = event.debateId, stage = event.stage) },
                     event.turnEndsAt.toInstant(ZoneOffset.UTC),
                 )
             }.onFailure {
@@ -65,10 +67,22 @@ class DebateStageChangedEventHandler(
         }
     }
 
+    private fun forceAdvanceByStage(
+        debateId: String,
+        stage: DebateStage,
+    ) {
+        if (stage == DebateStage.FREE) {
+            debateFreeMessageService.forceEndIfOverdue(debateId = debateId)
+        } else {
+            debateHistoryService.forceAdvanceIfOverdue(debateId = debateId)
+        }
+    }
+
     private fun isTimedStage(
         stage: DebateStage,
     ) = stage == DebateStage.OPENING_PROS || stage == DebateStage.OPENING_CONS ||
-        stage == DebateStage.REBUTTAL_PROS || stage == DebateStage.REBUTTAL_CONS
+        stage == DebateStage.REBUTTAL_PROS || stage == DebateStage.REBUTTAL_CONS ||
+        stage == DebateStage.FREE
 
     private fun isVerdictStage(
         stage: DebateStage,

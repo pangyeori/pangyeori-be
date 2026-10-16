@@ -195,7 +195,7 @@ class DebateConnectionService(
             DebateStageChangedEvent(
                 debateId = debateId,
                 stage = debate.currentStage,
-                turnEndsAt = debate.currentTurnEndsAt(),
+                turnEndsAt = debate.currentStageEndsAt(),
             ),
         )
         logger.info { "토론을 시작했습니다. debateId=$debateId" }
