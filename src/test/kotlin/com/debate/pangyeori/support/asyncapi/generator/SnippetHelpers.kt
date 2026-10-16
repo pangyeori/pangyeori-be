@@ -36,13 +36,14 @@ internal fun parameterNamesFromPath(
     path: String,
 ): List<String> = Regex("\\{([^}]+)}").findAll(path).map { it.groupValues[1] }.toList()
 
-internal fun receiveOperationNode(
+internal fun operationNode(
+    action: String,
     channelName: String,
     messageKey: String,
     summary: String?,
 ): Map<String, Any> {
     val node = linkedMapOf<String, Any>(
-        "action" to "receive",
+        "action" to action,
         "channel" to linkedMapOf<String, Any>(
             "\$ref" to "#/channels/$channelName",
         ),

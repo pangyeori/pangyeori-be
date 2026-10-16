@@ -13,6 +13,7 @@ internal class ChannelSnippet(
     private val serverRef: String,
     private val parameters: List<Pair<String, String>>,
     private val messages: List<DocumentedMessage>,
+    private val action: String = "receive",
 ) : AsyncApiSnippet {
 
     override fun toFragment(): Map<String, Any> {
@@ -49,7 +50,8 @@ internal class ChannelSnippet(
         }
 
         val operations = messagesByKey.entries.associate { (key, group) ->
-            "$channelName-$key" to receiveOperationNode(
+            "$channelName-$key" to operationNode(
+                action = action,
                 channelName = channelName,
                 messageKey = key,
                 summary = group.first().summary,
