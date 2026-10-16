@@ -39,7 +39,7 @@ class WebSocketConfig(
     override fun configureMessageBroker(
         registry: MessageBrokerRegistry,
     ) {
-        registry.enableSimpleBroker(SUBSCRIBE_PREFIX)
+        registry.enableSimpleBroker(SUBSCRIBE_PREFIX, QUEUE_PREFIX)
         registry.setApplicationDestinationPrefixes(PUBLISH_PREFIX)
     }
 
@@ -53,5 +53,6 @@ class WebSocketConfig(
         const val ENDPOINT = "/ws"
         const val SUBSCRIBE_PREFIX = "/sub"
         const val PUBLISH_PREFIX = "/pub"
+        const val QUEUE_PREFIX = "/queue"
     }
 }

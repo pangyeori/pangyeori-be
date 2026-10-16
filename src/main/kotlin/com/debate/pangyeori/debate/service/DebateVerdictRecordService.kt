@@ -64,7 +64,7 @@ class DebateVerdictRecordService(
             DebateStageChangedEvent(
                 debateId = debate.id!!,
                 stage = nextStage,
-                turnEndsAt = debate.currentTurnEndsAt(),
+                turnEndsAt = debate.currentStageEndsAt(),
             ),
         )
 

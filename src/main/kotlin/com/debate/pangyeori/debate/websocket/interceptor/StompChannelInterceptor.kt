@@ -58,7 +58,10 @@ class StompChannelInterceptor(
     private fun authorizeSubscribe(
         accessor: StompHeaderAccessor,
     ) {
-        val debateId = DebateDestination.debateIdOf(accessor.destination)
+        val destination = accessor.destination ?: throw DebateAccessDeniedException()
+        if (destination.startsWith(USER_DESTINATION_PREFIX)) return
+
+        val debateId = DebateDestination.debateIdOf(destination)
             ?: throw DebateAccessDeniedException()
         val userId = accessor.user?.name ?: throw InvalidTokenException()
         val sessionId = accessor.sessionId ?: throw InvalidTokenException()
@@ -73,5 +76,6 @@ class StompChannelInterceptor(
     companion object {
         private const val AUTHORIZATION_HEADER = "Authorization"
         private const val BEARER_PREFIX = "Bearer "
+        private const val USER_DESTINATION_PREFIX = "/user/"
     }
 }

@@ -31,7 +31,7 @@ data class DebateResponse(
             guestPosition = debate.hostPosition.opposite(),
             status = debate.status,
             currentStage = debate.currentStage,
-            turnEndsAt = debate.currentTurnEndsAt(),
+            turnEndsAt = debate.currentStageEndsAt(),
             turnTimeSeconds = debate.turnTimeSeconds,
             freeDebateTimeSeconds = debate.freeDebateTimeSeconds,
             inviteToken = if (isHost) debate.inviteToken else null,
