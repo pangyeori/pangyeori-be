@@ -85,7 +85,9 @@ class Debate private constructor(
         currentStageStartedAt = LocalDateTime.now(ZoneOffset.UTC)
     }
 
-    fun currentTurnEndsAt(): LocalDateTime? = currentStageStartedAt?.plusSeconds(turnTimeSeconds.toLong())
+    fun currentStageEndsAt(): LocalDateTime? = currentStageStartedAt?.plusSeconds(
+        if (currentStage == DebateStage.FREE) freeDebateTimeSeconds.toLong() else turnTimeSeconds.toLong(),
+    )
 
     companion object {
         fun create(

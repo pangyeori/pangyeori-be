@@ -119,7 +119,7 @@ class DebateHistoryService(
         val debate = debateRepository.findWithLockById(id = debateId) ?: return
         val stage = debate.currentStage
         if (!isTimedStage(stage)) return
-        val deadline = debate.currentTurnEndsAt() ?: return
+        val deadline = debate.currentStageEndsAt() ?: return
         if (LocalDateTime.now(ZoneOffset.UTC).isBefore(deadline)) return
         if (debateHistoryRepository.findByDebateIdAndStage(debateId = debateId, stage = stage) != null) {
             return
@@ -169,7 +169,7 @@ class DebateHistoryService(
             DebateStageChangedEvent(
                 debateId = debate.id!!,
                 stage = nextStage,
-                turnEndsAt = debate.currentTurnEndsAt(),
+                turnEndsAt = debate.currentStageEndsAt(),
             ),
         )
     }

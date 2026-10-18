@@ -17,6 +17,7 @@ data class DebateConnectionEvent(
     val verdictStatus: DebateVerdictStatus? = null,
     val winnerPosition: WinnerPosition? = null,
     val reasoning: String? = null,
+    val messageId: String? = null,
 ) {
     enum class Type {
         ENTERED,
@@ -26,5 +27,6 @@ data class DebateConnectionEvent(
         STATEMENT_SUBMITTED,
         STATEMENT_TIMED_OUT,
         VERDICT_ISSUED,
+        FREE_MESSAGE_SENT,
     }
 }

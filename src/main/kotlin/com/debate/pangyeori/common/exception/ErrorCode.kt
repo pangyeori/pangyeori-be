@@ -25,6 +25,7 @@ enum class ErrorCode(
     DEBATE_ALREADY_CONNECTED(HttpStatus.CONFLICT, "이미 다른 토론방에 접속 중입니다."),
     DEBATE_NOT_YOUR_TURN(HttpStatus.UNPROCESSABLE_ENTITY, "지금은 발언할 차례가 아닙니다."),
     DEBATE_HISTORY_ALREADY_SUBMITTED(HttpStatus.CONFLICT, "이미 이 단계의 발언을 제출했습니다."),
+    DEBATE_NOT_FREE_STAGE(HttpStatus.UNPROCESSABLE_ENTITY, "지금은 자유 토론 단계가 아닙니다."),
 
     // 사용자
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
