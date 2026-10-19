@@ -5,5 +5,7 @@ interface EmailSender {
         to: String,
         subject: String,
         content: String,
+        htmlContent: String,
+        inlineImages: List<EmailInlineImage>,
     )
 }
