@@ -86,7 +86,7 @@ class EmailVerificationRedisRepository(
         private const val ATTEMPT_KEY_PREFIX = "email-verification:attempt:"
         private const val VERIFIED_VALUE = "true"
         private const val RATE_LIMIT_VALUE = "true"
-        private val CODE_TTL = Duration.ofMinutes(5)
+        val CODE_TTL: Duration = Duration.ofMinutes(5)
         private val VERIFIED_TTL = Duration.ofMinutes(30)
         private val RATE_LIMIT_TTL = Duration.ofSeconds(60)
     }

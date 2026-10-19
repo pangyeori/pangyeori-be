@@ -14,6 +14,8 @@ class LoggingEmailSender : EmailSender {
         to: String,
         subject: String,
         content: String,
+        htmlContent: String,
+        inlineImages: List<EmailInlineImage>,
     ) {
         logger.info { "[local] 이메일 발송 생략. to=$to, subject=$subject, content=$content" }
     }

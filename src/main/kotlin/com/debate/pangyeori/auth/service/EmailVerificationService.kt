@@ -9,6 +9,7 @@ import com.debate.pangyeori.common.util.mapStorageFailure
 import com.debate.pangyeori.common.util.maskEmail
 import com.debate.pangyeori.email.sender.EmailSender
 import com.debate.pangyeori.email.exception.EmailSendFailedException
+import com.debate.pangyeori.email.template.EmailVerificationTemplate
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.mail.MailException
 import org.springframework.stereotype.Service
@@ -18,6 +19,7 @@ import java.security.SecureRandom
 class EmailVerificationService(
     private val emailVerificationRedisRepository: EmailVerificationRedisRepository,
     private val emailSender: EmailSender,
+    private val emailVerificationTemplate: EmailVerificationTemplate,
 ) {
 
     private val logger = KotlinLogging.logger {}
@@ -41,6 +43,11 @@ class EmailVerificationService(
                 to = email,
                 subject = MAIL_SUBJECT,
                 content = "인증 코드: $code",
+                htmlContent = emailVerificationTemplate.render(
+                    code = code,
+                    validityMinutes = EmailVerificationRedisRepository.CODE_TTL.toMinutes(),
+                ),
+                inlineImages = emailVerificationTemplate.inlineImages,
             )
         } catch (e: MailException) {
             logger.warn(e) { "이메일 발송 재시도 초과로 발송에 실패했습니다. email=${email.maskEmail()}" }
@@ -80,7 +87,7 @@ class EmailVerificationService(
     private fun generateCode() = SECURE_RANDOM.nextInt(CODE_UPPER_BOUND).toString().padStart(CODE_LENGTH, '0')
 
     companion object {
-        private const val MAIL_SUBJECT = "[Pangyeori] 이메일 인증 코드"
+        private const val MAIL_SUBJECT = "[판겨리] 이메일 인증코드 안내"
         private const val CODE_LENGTH = 6
         private const val CODE_UPPER_BOUND = 1_000_000
         private const val MAX_CONFIRM_ATTEMPTS = 5L

@@ -8,6 +8,7 @@ import com.debate.pangyeori.auth.repository.EmailVerificationRedisRepository
 import com.debate.pangyeori.common.exception.StorageUnavailableException
 import com.debate.pangyeori.email.sender.EmailSender
 import com.debate.pangyeori.email.exception.EmailSendFailedException
+import com.debate.pangyeori.email.template.EmailVerificationTemplate
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.string.shouldMatch
@@ -26,6 +27,7 @@ class EmailVerificationServiceTest : BehaviorSpec({
     val emailVerificationService = EmailVerificationService(
         emailVerificationRedisRepository = emailVerificationRedisRepository,
         emailSender = emailSender,
+        emailVerificationTemplate = EmailVerificationTemplate(),
     )
 
     val email = "user@pangyeori.com"
@@ -61,6 +63,8 @@ class EmailVerificationServiceTest : BehaviorSpec({
                         to = email,
                         subject = any(),
                         content = match { it.contains(codeSlot.captured) },
+                        htmlContent = match { it.contains(codeSlot.captured) && !it.contains("{{") },
+                        inlineImages = any(),
                     )
                 }
             }
@@ -76,6 +80,8 @@ class EmailVerificationServiceTest : BehaviorSpec({
                         to = email,
                         subject = any(),
                         content = any(),
+                        htmlContent = any(),
+                        inlineImages = any(),
                     )
                 } throws MailSendException("발송 실패")
 
