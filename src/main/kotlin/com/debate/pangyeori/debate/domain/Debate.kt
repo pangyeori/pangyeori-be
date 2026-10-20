@@ -60,7 +60,7 @@ class Debate private constructor(
     val freeDebateTimeSeconds: Int,
 
     @Column(name = "winner_position", length = 20)
-    val winnerPosition: WinnerPosition? = null,
+    var winnerPosition: WinnerPosition? = null,
 
     @Column(name = "invite_token", length = 36)
     val inviteToken: String,
@@ -85,9 +85,24 @@ class Debate private constructor(
         currentStageStartedAt = LocalDateTime.now(ZoneOffset.UTC)
     }
 
-    fun currentStageEndsAt(): LocalDateTime? = currentStageStartedAt?.plusSeconds(
-        if (currentStage == DebateStage.FREE) freeDebateTimeSeconds.toLong() else turnTimeSeconds.toLong(),
-    )
+    fun finish(
+        winnerPosition: WinnerPosition?,
+    ) {
+        this.winnerPosition = winnerPosition
+        status = DebateStatus.FINISHED
+    }
+
+    fun currentStageEndsAt(): LocalDateTime? {
+        if (status != DebateStatus.IN_PROGRESS) return null
+        val duration = when (currentStage) {
+            DebateStage.OPENING_PROS, DebateStage.OPENING_CONS,
+            DebateStage.REBUTTAL_PROS, DebateStage.REBUTTAL_CONS -> turnTimeSeconds
+            DebateStage.FREE -> freeDebateTimeSeconds
+            else -> return null
+        }
+
+        return currentStageStartedAt?.plusSeconds(duration.toLong())
+    }
 
     companion object {
         fun create(

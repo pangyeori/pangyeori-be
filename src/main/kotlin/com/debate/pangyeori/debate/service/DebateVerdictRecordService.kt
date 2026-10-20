@@ -3,6 +3,7 @@ package com.debate.pangyeori.debate.service
 import com.debate.pangyeori.debate.client.DebateVerdictAiClient.DebateVerdictJudgment
 import com.debate.pangyeori.debate.domain.DebateVerdict
 import com.debate.pangyeori.debate.domain.enums.DebateStage
+import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.event.DebateStageChangedEvent
 import com.debate.pangyeori.debate.event.DebateVerdictIssuedEvent
 import com.debate.pangyeori.debate.repository.DebateRepository
@@ -27,6 +28,7 @@ class DebateVerdictRecordService(
         judgment: DebateVerdictJudgment?,
     ) {
         val debate = debateRepository.findWithLockById(id = debateId) ?: return
+        if (debate.status != DebateStatus.IN_PROGRESS) return
         if (debate.currentStage != stage) return
         if (debateVerdictRepository.findByDebateIdAndStage(debateId = debateId, stage = stage) != null) return
 
@@ -37,6 +39,8 @@ class DebateVerdictRecordService(
                     stage = stage,
                     winnerPosition = judgment.winnerPosition,
                     reasoning = judgment.reasoning,
+                    participantProsScore = judgment.participantProsScore,
+                    participantConsScore = judgment.participantConsScore,
                 )
             } else {
                 DebateVerdict.failure(
@@ -46,6 +50,12 @@ class DebateVerdictRecordService(
             },
         )
 
+        if (stage == DebateStage.FINAL_VERDICT) {
+            debate.finish(
+                winnerPosition = verdict.winnerPosition,
+            )
+        }
+
         eventPublisher.publishEvent(
             DebateVerdictIssuedEvent(
                 debateId = debate.id!!,
@@ -54,8 +64,15 @@ class DebateVerdictRecordService(
                 winnerPosition = verdict.winnerPosition,
                 reasoning = verdict.reasoning,
                 createdAt = verdict.createdAt!!,
+                participantProsScore = verdict.participantProsScore,
+                participantConsScore = verdict.participantConsScore,
             ),
         )
+
+        if (stage == DebateStage.FINAL_VERDICT) {
+            logger.info { "AI 최종 판결을 발급하고 토론을 종료했습니다. debateId=$debateId, status=${verdict.status}" }
+            return
+        }
 
         val nextStage = nextStageAfterVerdict(stage = stage)
         debate.advanceStage(next = nextStage)

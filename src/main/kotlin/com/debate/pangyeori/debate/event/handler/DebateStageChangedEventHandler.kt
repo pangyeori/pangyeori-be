@@ -13,8 +13,8 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.task.TaskExecutor
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.stereotype.Component
-import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
+import org.springframework.transaction.event.TransactionPhase
 import java.time.ZoneOffset
 
 @Component
@@ -62,7 +62,7 @@ class DebateStageChangedEventHandler(
                     debateVerdictService.issueVerdict(debateId = event.debateId, stage = event.stage)
                 }
             }.onFailure {
-                logger.warn(it) { "AI 중간 판결 처리 등록에 실패했습니다. debateId=${event.debateId}" }
+                logger.warn(it) { "AI 판결 처리 등록에 실패했습니다. debateId=${event.debateId}" }
             }
         }
     }
@@ -86,5 +86,5 @@ class DebateStageChangedEventHandler(
 
     private fun isVerdictStage(
         stage: DebateStage,
-    ) = stage == DebateStage.VERDICT_1 || stage == DebateStage.VERDICT_2
+    ) = stage == DebateStage.VERDICT_1 || stage == DebateStage.VERDICT_2 || stage == DebateStage.FINAL_VERDICT
 }

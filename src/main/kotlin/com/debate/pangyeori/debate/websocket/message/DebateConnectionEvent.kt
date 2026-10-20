@@ -4,6 +4,7 @@ import com.debate.pangyeori.debate.domain.enums.DebateStage
 import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 import com.debate.pangyeori.debate.domain.enums.DebateVerdictStatus
 import com.debate.pangyeori.debate.domain.enums.WinnerPosition
+import java.math.BigDecimal
 import java.time.LocalDateTime
 
 data class DebateConnectionEvent(
@@ -18,6 +19,8 @@ data class DebateConnectionEvent(
     val winnerPosition: WinnerPosition? = null,
     val reasoning: String? = null,
     val messageId: String? = null,
+    val participantProsScore: BigDecimal? = null,
+    val participantConsScore: BigDecimal? = null,
 ) {
     enum class Type {
         ENTERED,
@@ -33,5 +36,6 @@ data class DebateConnectionEvent(
         EARLY_END_DECLINED,
         EARLY_END_CANCELLED,
         EARLY_END_EXPIRED,
+        DEBATE_ENDED,
     }
 }
