@@ -13,6 +13,7 @@ import com.debate.pangyeori.debate.domain.enums.DebateVerdictStatus
 import com.debate.pangyeori.debate.domain.enums.WinnerPosition
 import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.repository.DebateUserRepository
+import com.debate.pangyeori.debate.service.DebateFreeMessageService
 import com.debate.pangyeori.debate.service.DebateHistoryService
 import com.debate.pangyeori.debate.websocket.message.DebateConnectionEvent
 import com.debate.pangyeori.support.asyncapi.AsyncApiDocsTest
@@ -27,10 +28,14 @@ import org.springframework.messaging.simp.stomp.StompFrameHandler
 import org.springframework.messaging.simp.stomp.StompHeaders
 import org.springframework.messaging.simp.stomp.StompSession
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter
-import org.springframework.web.socket.WebSocketHttpHeaders
 import org.springframework.web.socket.client.standard.StandardWebSocketClient
 import org.springframework.web.socket.messaging.WebSocketStompClient
+import tools.jackson.databind.ObjectMapper
+import org.springframework.web.socket.WebSocketHttpHeaders
 import java.lang.reflect.Type
+import java.math.BigDecimal
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.*
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
@@ -53,6 +58,12 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
 
     @Autowired
     private lateinit var debateHistoryService: DebateHistoryService
+
+    @Autowired
+    private lateinit var debateFreeMessageService: DebateFreeMessageService
+
+    @Autowired
+    private lateinit var objectMapper: ObjectMapper
 
     private val sessions = mutableListOf<StompSession>()
 
@@ -80,16 +91,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 example = "개설자 입장",
             ) {
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.ENTERED
                     it.role shouldBe DebateUserRole.HOST
@@ -101,16 +114,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
             ) {
                 trigger { guestSubscriber = connectAsSubscriber(guest, debateId) }
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.ENTERED
                     it.role shouldBe DebateUserRole.GUEST
@@ -121,16 +136,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 example = "토론 시작",
             ) {
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify { it.type shouldBe DebateConnectionEvent.Type.STARTED }
             }
             receive<DebateConnectionEvent>(
@@ -138,16 +155,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 example = "찬성 입장 발언 단계 시작",
             ) {
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify { it.stage shouldBe DebateStage.OPENING_PROS }
             }
             receive<DebateConnectionEvent>(
@@ -162,16 +181,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                     )
                 }
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.STATEMENT_SUBMITTED
                     it.role shouldBe DebateUserRole.HOST
@@ -183,16 +204,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 example = "반대 입장 발언 단계로 전환",
             ) {
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify { it.stage shouldBe DebateStage.OPENING_CONS }
             }
             receive<DebateConnectionEvent>(
@@ -207,16 +230,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                     )
                 }
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.STATEMENT_SUBMITTED
                     it.role shouldBe DebateUserRole.GUEST
@@ -228,16 +253,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 example = "AI 1차 중간 판결 단계로 전환",
             ) {
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify { it.stage shouldBe DebateStage.VERDICT_1 }
             }
             receive<DebateConnectionEvent>(
@@ -245,16 +272,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 example = "AI 1차 중간 판결 완료",
             ) {
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.VERDICT_ISSUED
                     it.verdictStatus shouldBe DebateVerdictStatus.SUCCESS
@@ -266,16 +295,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 example = "찬성 반박 발언 단계로 전환",
             ) {
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify { it.stage shouldBe DebateStage.REBUTTAL_PROS }
             }
             receive<DebateConnectionEvent>(
@@ -290,16 +321,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                     )
                 }
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.STATEMENT_SUBMITTED
                     it.role shouldBe DebateUserRole.HOST
@@ -311,16 +344,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 example = "반대 논박 단계로 전환",
             ) {
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify { it.stage shouldBe DebateStage.REBUTTAL_CONS }
             }
             receive<DebateConnectionEvent>(
@@ -335,16 +370,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                     )
                 }
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.STATEMENT_SUBMITTED
                     it.role shouldBe DebateUserRole.GUEST
@@ -356,16 +393,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 example = "AI 2차 중간 판결 단계로 전환",
             ) {
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify { it.stage shouldBe DebateStage.VERDICT_2 }
             }
             receive<DebateConnectionEvent>(
@@ -373,16 +412,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 example = "AI 2차 중간 판결 완료",
             ) {
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.VERDICT_ISSUED
                     it.stage shouldBe DebateStage.VERDICT_2
@@ -395,16 +436,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 example = "자유 토론 단계로 전환",
             ) {
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify { it.stage shouldBe DebateStage.FREE }
             }
             receive<DebateConnectionEvent>(
@@ -413,16 +456,18 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
             ) {
                 trigger { guestSubscriber.session.disconnect() }
                 field("debateId", "토론방 ID")
-                field("type", "이벤트 종류 (ENTERED, LEFT, STARTED, STAGE_CHANGED, STATEMENT_SUBMITTED, STATEMENT_TIMED_OUT, VERDICT_ISSUED)")
+                field("type", "이벤트 종류 (입장, 이탈, 시작, 단계 전환, 발언, 판결, 자유 토론 메시지, 종료)")
                 field("role", "입장·이탈한 참여자 또는 발언 제출자의 역할. 시작/단계 전환/판결 이벤트에는 없음").optional()
                 field("stage", "발언 제출·시간 초과, 단계 전환, 판결 이벤트에서만 쓰는 토론 단계").optional()
                 field("content", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 내용. 시간 초과로 무응답 처리된 경우 null").optional()
                 field("turnEndsAt", "단계 전환 이벤트에서만 쓰는 다음 턴 마감 시각").optional()
                 field("submittedAt", "발언 제출/시간 초과 이벤트에서만 쓰는 발언 제출 시각").optional()
-                field("verdictStatus", "AI 중간 판결 이벤트에서만 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
-                field("winnerPosition", "AI 중간 판결 이벤트에서만 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
-                field("reasoning", "AI 중간 판결 이벤트에서만 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
+                field("verdictStatus", "AI 판결 이벤트에서 쓰는 판결 처리 상태 (SUCCESS, FAILED)").optional()
+                field("winnerPosition", "AI 판결 이벤트에서 쓰는 우세 포지션. 판결에 실패한 경우 null").optional()
+                field("reasoning", "AI 판결 이벤트에서 쓰는 판결 근거. 판결에 실패한 경우 null").optional()
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
+                field("participantProsScore", "최종 판결 찬성 점수").optional()
+                field("participantConsScore", "최종 판결 반대 점수").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.LEFT
                     it.role shouldBe DebateUserRole.GUEST
@@ -476,6 +521,70 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
         guestSubscriber.session.disconnect()
 
         debateRepository.findById(debateId).get().status shouldBe DebateStatus.IN_PROGRESS
+    }
+
+    @Test
+    fun `자유 토론 종료 후 최종 판결과 종료 이벤트를 받고 저장된 결과를 확인한다`() {
+        val host = saveUser(
+            prefix = "final-host",
+        )
+        val guest = saveUser(
+            prefix = "final-guest",
+        )
+        val debate = saveReadyDebate(
+            host = host,
+            guest = guest,
+        )
+        debate.start()
+        debate.advanceStage(
+            next = DebateStage.FREE,
+        )
+        debateRepository.saveAndFlush(debate)
+        val debateId = debate.id!!
+        val subscriber = connectAsSubscriber(
+            user = host,
+            debateId = debateId,
+        )
+        awaitFrame(
+            frames = subscriber.frames,
+            matches = { it.contains("\"type\":\"ENTERED\"") },
+        )
+
+        debateFreeMessageService.submit(
+            debateId = debateId,
+            userId = host.id!!,
+            content = "찬성 측의 마지막 근거입니다.",
+        )
+        val overdue = debateRepository.findById(debateId).orElseThrow()
+        overdue.currentStageStartedAt = LocalDateTime.now(ZoneOffset.UTC)
+            .minusSeconds(overdue.freeDebateTimeSeconds.toLong() + 1)
+        debateRepository.saveAndFlush(overdue)
+        debateFreeMessageService.forceEndIfOverdue(
+            debateId = debateId,
+        )
+
+        val received = mutableMapOf<DebateConnectionEvent.Type, DebateConnectionEvent>()
+        val deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(TIMEOUT_SECONDS)
+        while (System.currentTimeMillis() < deadline &&
+            !(received.containsKey(DebateConnectionEvent.Type.VERDICT_ISSUED) &&
+                received.containsKey(DebateConnectionEvent.Type.DEBATE_ENDED))
+        ) {
+            val frame = subscriber.frames.poll(500, TimeUnit.MILLISECONDS) ?: continue
+            val event = objectMapper.readValue(frame, DebateConnectionEvent::class.java)
+            received[event.type] = event
+        }
+
+        val verdict = received[DebateConnectionEvent.Type.VERDICT_ISSUED]!!
+        verdict.stage shouldBe DebateStage.FINAL_VERDICT
+        verdict.verdictStatus shouldBe DebateVerdictStatus.SUCCESS
+        verdict.winnerPosition shouldBe WinnerPosition.PROS
+        verdict.participantProsScore shouldBe BigDecimal("62.5")
+        verdict.participantConsScore shouldBe BigDecimal("37.5")
+        received[DebateConnectionEvent.Type.DEBATE_ENDED]!!.winnerPosition shouldBe WinnerPosition.PROS
+        val finished = debateRepository.findById(debateId).orElseThrow()
+        finished.status shouldBe DebateStatus.FINISHED
+        finished.winnerPosition shouldBe WinnerPosition.PROS
+        finished.currentStageEndsAt() shouldBe null
     }
 
     private fun connectAsSubscriber(

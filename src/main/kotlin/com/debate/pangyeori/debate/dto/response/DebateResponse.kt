@@ -4,6 +4,7 @@ import com.debate.pangyeori.debate.domain.Debate
 import com.debate.pangyeori.debate.domain.enums.DebatePosition
 import com.debate.pangyeori.debate.domain.enums.DebateStage
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
+import com.debate.pangyeori.debate.domain.enums.WinnerPosition
 import java.time.LocalDateTime
 
 data class DebateResponse(
@@ -18,6 +19,7 @@ data class DebateResponse(
     val turnTimeSeconds: Int,
     val freeDebateTimeSeconds: Int,
     val inviteToken: String?,
+    val winnerPosition: WinnerPosition? = null,
 ) {
     companion object {
         fun from(
@@ -35,6 +37,7 @@ data class DebateResponse(
             turnTimeSeconds = debate.turnTimeSeconds,
             freeDebateTimeSeconds = debate.freeDebateTimeSeconds,
             inviteToken = if (isHost) debate.inviteToken else null,
+            winnerPosition = debate.winnerPosition,
         )
     }
 }

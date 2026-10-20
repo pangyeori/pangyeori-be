@@ -39,8 +39,14 @@ class DebateFreeMessageService(
         userId: String,
         content: String,
     ): DebateFreeMessageResponse {
-        val debate = debateRepository.findById(debateId).orElseThrow { DebateNotFoundException() }
+        val debate = debateRepository.findWithLockById(
+            id = debateId,
+        ) ?: throw DebateNotFoundException()
         if (debate.status != DebateStatus.IN_PROGRESS || debate.currentStage != DebateStage.FREE) {
+            throw DebateNotFreeStageException()
+        }
+        val deadline = debate.currentStageEndsAt()
+        if (deadline != null && !LocalDateTime.now(ZoneOffset.UTC).isBefore(deadline)) {
             throw DebateNotFreeStageException()
         }
         val member = debateUserRepository.findByDebateIdAndUserId(
@@ -113,7 +119,7 @@ class DebateFreeMessageService(
         debateId: String,
     ) {
         val debate = debateRepository.findWithLockById(id = debateId) ?: return
-        if (debate.currentStage != DebateStage.FREE) return
+        if (debate.status != DebateStatus.IN_PROGRESS || debate.currentStage != DebateStage.FREE) return
         val deadline = debate.currentStageEndsAt() ?: return
         if (LocalDateTime.now(ZoneOffset.UTC).isBefore(deadline)) return
 

@@ -13,15 +13,17 @@ import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.repository.DebateVerdictRepository
 import com.debate.pangyeori.support.fixture.setAuditFields
 import com.navercorp.fixturemonkey.FixtureMonkey
-import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
 import com.navercorp.fixturemonkey.kotlin.giveMeKotlinBuilder
+import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.springframework.context.ApplicationEventPublisher
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
@@ -185,6 +187,125 @@ class DebateVerdictRecordServiceTest : BehaviorSpec({
             verify(exactly = 1) {
                 eventPublisher.publishEvent(match<DebateStageChangedEvent> { it.stage == DebateStage.FREE })
             }
+        }
+    }
+    Given("최종 판결을 기록하면") {
+        listOf(WinnerPosition.PROS, WinnerPosition.CONS, WinnerPosition.DRAW).forEach { winner ->
+            Then("$winner 판결과 점수를 저장하고 토론을 종료한다") {
+                val target = debate(stage = DebateStage.FINAL_VERDICT)
+                every { debateRepository.findWithLockById(debateId) } returns target
+                every { debateVerdictRepository.findByDebateIdAndStage(debateId, DebateStage.FINAL_VERDICT) } returns null
+                val saved = slot<DebateVerdict>()
+                every { debateVerdictRepository.save(capture(saved)) } answers {
+                    setAuditFields(
+                        entity = firstArg<DebateVerdict>(),
+                        createdAt = now,
+                    )
+                }
+                val pros = when {
+                    winner == WinnerPosition.PROS -> BigDecimal("60.0")
+                    winner == WinnerPosition.CONS -> BigDecimal("40.0")
+                    else -> BigDecimal("50.0")
+                }
+                val cons = BigDecimal("100.0") - pros
+
+                service.record(
+                    debateId = debateId,
+                    stage = DebateStage.FINAL_VERDICT,
+                    judgment = DebateVerdictJudgment(
+                        winnerPosition = winner,
+                        reasoning = "전체 토론 종합 판결",
+                        participantProsScore = pros,
+                        participantConsScore = cons,
+                    ),
+                )
+
+                saved.captured.stage shouldBe DebateStage.FINAL_VERDICT
+                saved.captured.participantProsScore shouldBe pros
+                saved.captured.participantConsScore shouldBe cons
+                saved.captured.reasoning shouldBe "전체 토론 종합 판결"
+                target.status shouldBe DebateStatus.FINISHED
+                target.winnerPosition shouldBe winner
+                target.currentStage shouldBe DebateStage.FINAL_VERDICT
+                target.currentStageEndsAt() shouldBe null
+                verify(exactly = 1) {
+                    eventPublisher.publishEvent(
+                        match<DebateVerdictIssuedEvent> {
+                            it.stage == DebateStage.FINAL_VERDICT && it.winnerPosition == winner &&
+                                it.participantProsScore == pros && it.participantConsScore == cons
+                        },
+                    )
+                }
+                verify(exactly = 0) {
+                    eventPublisher.publishEvent(match<Any> { it is DebateStageChangedEvent })
+                }
+            }
+        }
+
+        Then("AI 호출에 실패해도 실패 상태를 저장하고 승자 없이 토론을 종료한다") {
+            val target = debate(stage = DebateStage.FINAL_VERDICT)
+            every { debateRepository.findWithLockById(debateId) } returns target
+            every { debateVerdictRepository.findByDebateIdAndStage(debateId, DebateStage.FINAL_VERDICT) } returns null
+            val saved = slot<DebateVerdict>()
+            every { debateVerdictRepository.save(capture(saved)) } answers {
+                setAuditFields(
+                    entity = firstArg<DebateVerdict>(),
+                    createdAt = now,
+                )
+            }
+
+            service.record(
+                debateId = debateId,
+                stage = DebateStage.FINAL_VERDICT,
+                judgment = null,
+            )
+
+            saved.captured.status shouldBe DebateVerdictStatus.FAILED
+            saved.captured.winnerPosition shouldBe null
+            saved.captured.participantProsScore shouldBe null
+            saved.captured.participantConsScore shouldBe null
+            target.status shouldBe DebateStatus.FINISHED
+            target.winnerPosition shouldBe null
+            verify(exactly = 1) {
+                eventPublisher.publishEvent(
+                    match<DebateVerdictIssuedEvent> {
+                        it.stage == DebateStage.FINAL_VERDICT && it.status == DebateVerdictStatus.FAILED
+                    },
+                )
+            }
+        }
+
+        Then("완료한 최종 판결을 다시 기록하지 않는다") {
+            val target = debate(stage = DebateStage.FINAL_VERDICT)
+            target.finish(
+                winnerPosition = WinnerPosition.CONS,
+            )
+            every { debateRepository.findWithLockById(debateId) } returns target
+
+            service.record(
+                debateId = debateId,
+                stage = DebateStage.FINAL_VERDICT,
+                judgment = null,
+            )
+
+            target.winnerPosition shouldBe WinnerPosition.CONS
+            verify(exactly = 0) { debateVerdictRepository.save(any()) }
+            verify(exactly = 0) { eventPublisher.publishEvent(any<DebateVerdictIssuedEvent>()) }
+        }
+
+        Then("취소된 토론에는 판결을 기록하지 않는다") {
+            val target = debate(stage = DebateStage.FINAL_VERDICT)
+            target.status = DebateStatus.CANCELLED
+            every { debateRepository.findWithLockById(debateId) } returns target
+
+            service.record(
+                debateId = debateId,
+                stage = DebateStage.FINAL_VERDICT,
+                judgment = null,
+            )
+
+            target.status shouldBe DebateStatus.CANCELLED
+            verify(exactly = 0) { debateVerdictRepository.save(any()) }
         }
     }
 })

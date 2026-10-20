@@ -26,6 +26,7 @@ enum class ErrorCode(
     DEBATE_NOT_YOUR_TURN(HttpStatus.UNPROCESSABLE_ENTITY, "지금은 발언할 차례가 아닙니다."),
     DEBATE_HISTORY_ALREADY_SUBMITTED(HttpStatus.CONFLICT, "이미 이 단계의 발언을 제출했습니다."),
     DEBATE_NOT_FREE_STAGE(HttpStatus.UNPROCESSABLE_ENTITY, "지금은 자유 토론 단계가 아닙니다."),
+    DEBATE_VERDICT_INVALID(HttpStatus.SERVICE_UNAVAILABLE, "AI 판결 응답이 올바르지 않습니다."),
     DEBATE_EARLY_END_ALREADY_PROPOSED(HttpStatus.CONFLICT, "이미 진행 중인 조기 종료 제안이 있습니다."),
     DEBATE_EARLY_END_NOT_PROPOSED(HttpStatus.CONFLICT, "진행 중인 조기 종료 제안이 없습니다."),
     DEBATE_EARLY_END_SELF_RESPONSE_NOT_ALLOWED(HttpStatus.UNPROCESSABLE_ENTITY, "본인이 제안한 조기 종료에는 응답할 수 없습니다."),

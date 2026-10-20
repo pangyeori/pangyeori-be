@@ -6,6 +6,7 @@ import io.hypersistence.utils.hibernate.id.Tsid
 import jakarta.persistence.*
 import org.hibernate.annotations.SQLDelete
 import org.hibernate.annotations.SQLRestriction
+import java.math.BigDecimal
 
 @Entity
 @Table(
@@ -40,6 +41,12 @@ class DebateVerdict private constructor(
 
     @Column(columnDefinition = "TEXT")
     val reasoning: String?,
+
+    @Column(name = "participant_pros_score", precision = 4, scale = 1)
+    val participantProsScore: BigDecimal? = null,
+
+    @Column(name = "participant_cons_score", precision = 4, scale = 1)
+    val participantConsScore: BigDecimal? = null,
 ) : BaseEntity() {
     companion object {
         fun success(
@@ -47,12 +54,16 @@ class DebateVerdict private constructor(
             stage: DebateStage,
             winnerPosition: WinnerPosition,
             reasoning: String,
+            participantProsScore: BigDecimal? = null,
+            participantConsScore: BigDecimal? = null,
         ) = DebateVerdict(
             debate = debate,
             stage = stage,
             status = DebateVerdictStatus.SUCCESS,
             winnerPosition = winnerPosition,
             reasoning = reasoning,
+            participantProsScore = participantProsScore,
+            participantConsScore = participantConsScore,
         )
 
         fun failure(
