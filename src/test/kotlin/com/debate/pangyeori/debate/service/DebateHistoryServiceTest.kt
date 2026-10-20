@@ -3,10 +3,13 @@ package com.debate.pangyeori.debate.service
 import com.debate.pangyeori.debate.domain.Debate
 import com.debate.pangyeori.debate.domain.DebateHistory
 import com.debate.pangyeori.debate.domain.DebateUser
+import com.debate.pangyeori.debate.domain.DebateVerdict
 import com.debate.pangyeori.debate.domain.enums.DebatePosition
 import com.debate.pangyeori.debate.domain.enums.DebateStage
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
 import com.debate.pangyeori.debate.domain.enums.DebateUserRole
+import com.debate.pangyeori.debate.domain.enums.DebateVerdictStatus
+import com.debate.pangyeori.debate.domain.enums.WinnerPosition
 import com.debate.pangyeori.debate.event.DebateHistoryRecordedEvent
 import com.debate.pangyeori.debate.event.DebateStageChangedEvent
 import com.debate.pangyeori.debate.exception.DebateHistoryAlreadySubmittedException
@@ -19,8 +22,8 @@ import com.debate.pangyeori.support.fixture.setAuditFields
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.repository.UserRepository
 import com.navercorp.fixturemonkey.FixtureMonkey
-import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
 import com.navercorp.fixturemonkey.kotlin.giveMeKotlinBuilder
+import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -29,6 +32,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.springframework.context.ApplicationEventPublisher
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.Optional
@@ -347,6 +351,48 @@ class DebateHistoryServiceTest : BehaviorSpec({
                     }
                 }
             }
+        }
+    }
+    Given("토론이 종료된 후 발언 기록을 조회하면") {
+        Then("참여자에게 저장된 최종 판결의 점수와 근거를 반환한다") {
+            val target = debate(
+                stage = DebateStage.FINAL_VERDICT,
+            )
+            target.finish(
+                winnerPosition = WinnerPosition.PROS,
+            )
+            val finalVerdict = setAuditFields(
+                entity = fixtureMonkey.giveMeKotlinBuilder<DebateVerdict>()
+                    .set(DebateVerdict::id, "0000000000099")
+                    .set(DebateVerdict::stage, DebateStage.FINAL_VERDICT)
+                    .set(DebateVerdict::status, DebateVerdictStatus.SUCCESS)
+                    .set(DebateVerdict::winnerPosition, WinnerPosition.PROS)
+                    .set(DebateVerdict::reasoning, "전체 발언을 종합한 판결 근거")
+                    .set(DebateVerdict::participantProsScore, BigDecimal("62.5"))
+                    .set(DebateVerdict::participantConsScore, BigDecimal("37.5"))
+                    .sample(),
+                createdAt = now,
+            )
+            every { userRepository.findByEmail(hostEmail) } returns
+                fixtureMonkey.giveMeKotlinBuilder<User>().set(User::id, hostId).sample()
+            every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns member(
+                position = DebatePosition.PROS,
+                role = DebateUserRole.HOST,
+            )
+            every { debateRepository.findWithLockById(debateId) } returns target
+            every { debateHistoryRepository.findAllByDebateIdOrderByCreatedAtAsc(debateId) } returns emptyList()
+            every { debateVerdictRepository.findAllByDebateIdOrderByCreatedAtAsc(debateId) } returns listOf(finalVerdict)
+
+            val response = service.getHistories(
+                debateId = debateId,
+                userEmail = hostEmail,
+            )
+
+            response.verdicts.single().winnerPosition shouldBe WinnerPosition.PROS
+            response.verdicts.single().participantProsScore shouldBe BigDecimal("62.5")
+            response.verdicts.single().participantConsScore shouldBe BigDecimal("37.5")
+            response.verdicts.single().reasoning shouldBe "전체 발언을 종합한 판결 근거"
+            verify(exactly = 0) { debateHistoryRepository.save(any()) }
         }
     }
 })

@@ -4,24 +4,31 @@ import com.debate.pangyeori.debate.client.DebateVerdictAiClient
 import com.debate.pangyeori.debate.client.DebateVerdictAiClient.DebateVerdictJudgment
 import com.debate.pangyeori.debate.client.DebateVerdictAiClient.DebateVerdictJudgmentRequest
 import com.debate.pangyeori.debate.domain.Debate
+import com.debate.pangyeori.debate.domain.DebateFreeMessage
 import com.debate.pangyeori.debate.domain.DebateHistory
 import com.debate.pangyeori.debate.domain.DebateVerdict
+import com.debate.pangyeori.debate.domain.enums.DebatePosition
 import com.debate.pangyeori.debate.domain.enums.DebateStage
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
+import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 import com.debate.pangyeori.debate.domain.enums.DebateVerdictStatus
 import com.debate.pangyeori.debate.domain.enums.WinnerPosition
+import com.debate.pangyeori.debate.repository.DebateFreeMessageRepository
 import com.debate.pangyeori.debate.repository.DebateHistoryRepository
 import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.repository.DebateVerdictRepository
 import com.debate.pangyeori.support.fixture.setAuditFields
 import com.navercorp.fixturemonkey.FixtureMonkey
-import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
 import com.navercorp.fixturemonkey.kotlin.giveMeKotlinBuilder
+import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.Optional
@@ -32,12 +39,14 @@ class DebateVerdictServiceTest : BehaviorSpec({
     val debateVerdictRepository = mockk<DebateVerdictRepository>()
     val debateVerdictAiClient = mockk<DebateVerdictAiClient>()
     val debateVerdictRecordService = mockk<DebateVerdictRecordService>(relaxed = true)
+    val debateFreeMessageRepository = mockk<DebateFreeMessageRepository>()
     val service = DebateVerdictService(
         debateRepository = debateRepository,
         debateHistoryRepository = debateHistoryRepository,
         debateVerdictRepository = debateVerdictRepository,
         debateVerdictAiClient = debateVerdictAiClient,
         debateVerdictRecordService = debateVerdictRecordService,
+        debateFreeMessageRepository = debateFreeMessageRepository,
     )
     val fixtureMonkey = FixtureMonkey.builder()
         .plugin(KotlinPlugin())
@@ -47,6 +56,7 @@ class DebateVerdictServiceTest : BehaviorSpec({
     val now = LocalDateTime.now(ZoneOffset.UTC)
 
     beforeEach {
+        clearMocks(debateFreeMessageRepository)
         clearMocks(debateRepository, debateHistoryRepository, debateVerdictRepository, debateVerdictAiClient, debateVerdictRecordService)
     }
 
@@ -195,6 +205,152 @@ class DebateVerdictServiceTest : BehaviorSpec({
                     judgment = match { it.winnerPosition == WinnerPosition.CONS },
                 )
             }
+        }
+    }
+    Given("최종 판결을 발급하면") {
+        listOf(DebatePosition.PROS, DebatePosition.CONS).forEach { hostPosition ->
+            Then("방장이 ${hostPosition.code}일 때 전체 발언과 자유 토론의 포지션 및 순서를 전달한다") {
+                val target = debate(stage = DebateStage.FINAL_VERDICT)
+                val finalDebate = fixtureMonkey.giveMeKotlinBuilder<Debate>()
+                    .set(Debate::id, debateId)
+                    .set(Debate::status, DebateStatus.IN_PROGRESS)
+                    .set(Debate::currentStage, DebateStage.FINAL_VERDICT)
+                    .set(Debate::title, target.title)
+                    .set(Debate::description, null)
+                    .set(Debate::hostPosition, hostPosition)
+                    .sample()
+                val rebuttals = listOf(DebateStage.REBUTTAL_PROS, DebateStage.REBUTTAL_CONS).map { stage ->
+                    fixtureMonkey.giveMeKotlinBuilder<DebateHistory>()
+                        .set(DebateHistory::stage, stage)
+                        .set(DebateHistory::content, stage.code)
+                        .sample()
+                }
+                val messages = listOf(DebateUserRole.GUEST, DebateUserRole.HOST, DebateUserRole.GUEST).map { role ->
+                    fixtureMonkey.giveMeKotlinBuilder<DebateFreeMessage>()
+                        .set(DebateFreeMessage::role, role)
+                        .set(DebateFreeMessage::content, "${role.code}의 자유 발언")
+                        .sample()
+                }
+                every { debateRepository.findById(debateId) } returns Optional.of(finalDebate)
+                every { debateVerdictRepository.findByDebateIdAndStage(debateId, DebateStage.FINAL_VERDICT) } returns null
+                every { debateHistoryRepository.findAllByDebateIdOrderByCreatedAtAsc(debateId) } returns histories() + rebuttals
+                every { debateFreeMessageRepository.findAllByDebateIdOrderByCreatedAtAscIdAsc(debateId) } returns messages
+                val request = slot<DebateVerdictJudgmentRequest>()
+                every { debateVerdictAiClient.judge(capture(request)) } returns DebateVerdictJudgment(
+                    winnerPosition = WinnerPosition.CONS,
+                    reasoning = "전체 발언에서 찬성 측이 더 구체적으로 대응했습니다.",
+                    participantProsScore = BigDecimal("62.5"),
+                    participantConsScore = BigDecimal("37.5"),
+                )
+
+                service.issueVerdict(
+                    debateId = debateId,
+                    stage = DebateStage.FINAL_VERDICT,
+                )
+
+                request.captured.prosStatement shouldBe "저는 찬성합니다"
+                request.captured.consStatement shouldBe "저는 반대합니다"
+                request.captured.prosRebuttal shouldBe DebateStage.REBUTTAL_PROS.code
+                request.captured.consRebuttal shouldBe DebateStage.REBUTTAL_CONS.code
+                request.captured.freeMessages.map { it.position } shouldBe
+                    listOf(hostPosition.opposite(), hostPosition, hostPosition.opposite())
+                request.captured.freeMessages.map { it.content } shouldBe messages.map { it.content }
+                verify(exactly = 1) {
+                    debateVerdictRecordService.record(
+                        debateId = debateId,
+                        stage = DebateStage.FINAL_VERDICT,
+                        judgment = match {
+                            it.winnerPosition == WinnerPosition.PROS && it.participantProsScore == BigDecimal("62.5")
+                        },
+                    )
+                }
+            }
+        }
+
+        listOf(
+            Triple("50", "50.0", WinnerPosition.DRAW),
+            Triple("0", "100", WinnerPosition.CONS),
+            Triple("100.0", "0.0", WinnerPosition.PROS),
+        ).forEach { (pros, cons, winner) ->
+            Then("점수가 $pros 대 $cons 이면 서버가 $winner 판정을 결정한다") {
+                every { debateRepository.findById(debateId) } returns Optional.of(debate(stage = DebateStage.FINAL_VERDICT))
+                every { debateVerdictRepository.findByDebateIdAndStage(debateId, DebateStage.FINAL_VERDICT) } returns null
+                every { debateHistoryRepository.findAllByDebateIdOrderByCreatedAtAsc(debateId) } returns emptyList()
+                every { debateFreeMessageRepository.findAllByDebateIdOrderByCreatedAtAscIdAsc(debateId) } returns emptyList()
+                every { debateVerdictAiClient.judge(any()) } returns DebateVerdictJudgment(
+                    winnerPosition = WinnerPosition.DRAW,
+                    reasoning = "종합 평가 결과입니다.",
+                    participantProsScore = BigDecimal(pros),
+                    participantConsScore = BigDecimal(cons),
+                )
+
+                service.issueVerdict(
+                    debateId = debateId,
+                    stage = DebateStage.FINAL_VERDICT,
+                )
+
+                verify(exactly = 1) {
+                    debateVerdictRecordService.record(debateId, DebateStage.FINAL_VERDICT, match { it.winnerPosition == winner })
+                }
+            }
+        }
+
+        listOf(
+            Triple(null, "50", "점수 누락"),
+            Triple("-1", "101", "음수와 상한 초과"),
+            Triple("60", "50", "합계 오류"),
+            Triple("50.01", "49.99", "소수점 자릿수 오류"),
+            Triple("50", "50", ""),
+        ).forEach { (pros, cons, reasoning) ->
+            Then("최종 판결 응답이 유효하지 않으면 실패 기록을 위임한다: $pros / $cons / $reasoning") {
+                every { debateRepository.findById(debateId) } returns Optional.of(debate(stage = DebateStage.FINAL_VERDICT))
+                every { debateVerdictRepository.findByDebateIdAndStage(debateId, DebateStage.FINAL_VERDICT) } returns null
+                every { debateHistoryRepository.findAllByDebateIdOrderByCreatedAtAsc(debateId) } returns emptyList()
+                every { debateFreeMessageRepository.findAllByDebateIdOrderByCreatedAtAscIdAsc(debateId) } returns emptyList()
+                every { debateVerdictAiClient.judge(any()) } returns DebateVerdictJudgment(
+                    winnerPosition = WinnerPosition.PROS,
+                    reasoning = reasoning,
+                    participantProsScore = pros?.let { BigDecimal(it) },
+                    participantConsScore = BigDecimal(cons),
+                )
+
+                service.issueVerdict(
+                    debateId = debateId,
+                    stage = DebateStage.FINAL_VERDICT,
+                )
+
+                verify(exactly = 1) { debateVerdictRecordService.record(debateId, DebateStage.FINAL_VERDICT, null) }
+            }
+        }
+
+        Then("AI 호출 실패 시 실패 기록을 위임한다") {
+            every { debateRepository.findById(debateId) } returns Optional.of(debate(stage = DebateStage.FINAL_VERDICT))
+            every { debateVerdictRepository.findByDebateIdAndStage(debateId, DebateStage.FINAL_VERDICT) } returns null
+            every { debateHistoryRepository.findAllByDebateIdOrderByCreatedAtAsc(debateId) } returns histories()
+            every { debateFreeMessageRepository.findAllByDebateIdOrderByCreatedAtAscIdAsc(debateId) } returns emptyList()
+            every { debateVerdictAiClient.judge(any()) } throws IllegalStateException("timeout")
+
+            service.issueVerdict(
+                debateId = debateId,
+                stage = DebateStage.FINAL_VERDICT,
+            )
+
+            verify(exactly = 1) { debateVerdictRecordService.record(debateId, DebateStage.FINAL_VERDICT, null) }
+        }
+
+        Then("종료된 토론에는 AI를 호출하지 않는다") {
+            val target = debate(stage = DebateStage.FINAL_VERDICT)
+            target.finish(
+                winnerPosition = WinnerPosition.PROS,
+            )
+            every { debateRepository.findById(debateId) } returns Optional.of(target)
+
+            service.issueVerdict(
+                debateId = debateId,
+                stage = DebateStage.FINAL_VERDICT,
+            )
+
+            verify(exactly = 0) { debateVerdictAiClient.judge(any()) }
         }
     }
 })

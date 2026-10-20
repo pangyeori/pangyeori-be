@@ -19,8 +19,8 @@ import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.exception.UserNotFoundException
 import com.debate.pangyeori.user.repository.UserRepository
 import com.navercorp.fixturemonkey.FixtureMonkey
-import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
 import com.navercorp.fixturemonkey.kotlin.giveMeKotlinBuilder
+import com.navercorp.fixturemonkey.kotlin.KotlinPlugin
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -82,7 +82,7 @@ class DebateFreeMessageServiceTest : BehaviorSpec({
         When("자유 토론 단계이고 토론방 멤버면") {
             Then("메시지를 저장하고 실시간 전달 이벤트를 발행한다") {
                 val target = debate(stage = DebateStage.FREE)
-                every { debateRepository.findById(debateId) } returns java.util.Optional.of(target)
+                every { debateRepository.findWithLockById(debateId) } returns target
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns
                     member(DebateUserRole.HOST)
                 every { debateFreeMessageRepository.save(any()) } answers {
@@ -113,7 +113,7 @@ class DebateFreeMessageServiceTest : BehaviorSpec({
         When("자유 토론 단계가 아니면") {
             Then("DebateNotFreeStageException을 던진다") {
                 val target = debate(stage = DebateStage.VERDICT_2)
-                every { debateRepository.findById(debateId) } returns java.util.Optional.of(target)
+                every { debateRepository.findWithLockById(debateId) } returns target
 
                 shouldThrow<DebateNotFreeStageException> {
                     service.submit(debateId = debateId, userId = hostId, content = "안녕하세요")
@@ -124,13 +124,34 @@ class DebateFreeMessageServiceTest : BehaviorSpec({
         When("토론방 멤버가 아니면") {
             Then("DebateAccessDeniedException을 던진다") {
                 val target = debate(stage = DebateStage.FREE)
-                every { debateRepository.findById(debateId) } returns java.util.Optional.of(target)
+                every { debateRepository.findWithLockById(debateId) } returns target
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns null
 
                 shouldThrow<DebateAccessDeniedException> {
                     service.submit(debateId = debateId, userId = hostId, content = "안녕하세요")
                 }
             }
+        }
+    }
+
+    Given("자유 토론 마감과 메시지 제출이 겹치면") {
+        Then("마감 시각이 지난 메시지를 저장하지 않는다") {
+            val target = debate(
+                stage = DebateStage.FREE,
+                currentStageStartedAt = now.minusSeconds(600),
+                freeDebateTimeSeconds = 300,
+            )
+            every { debateRepository.findWithLockById(debateId) } returns target
+
+            shouldThrow<DebateNotFreeStageException> {
+                service.submit(
+                    debateId = debateId,
+                    userId = hostId,
+                    content = "마감 후 발언",
+                )
+            }
+
+            verify(exactly = 0) { debateFreeMessageRepository.save(any()) }
         }
     }
 

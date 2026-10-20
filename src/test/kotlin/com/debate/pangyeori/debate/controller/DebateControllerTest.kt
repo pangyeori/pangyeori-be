@@ -8,8 +8,8 @@ import com.debate.pangyeori.debate.repository.DebateRepository
 import com.debate.pangyeori.debate.service.DebateParticipationService
 import com.debate.pangyeori.debate.service.DebateService
 import com.debate.pangyeori.support.fixture.EntityAuditIntegrationTestSupport
-import com.debate.pangyeori.support.restdocs.RestDocsMvcTest
 import com.debate.pangyeori.support.restdocs.dsl.restDocs
+import com.debate.pangyeori.support.restdocs.RestDocsMvcTest
 import com.debate.pangyeori.user.domain.User
 import com.debate.pangyeori.user.repository.UserRepository
 import org.junit.jupiter.api.Test
@@ -177,6 +177,7 @@ class DebateControllerTest : RestDocsMvcTest() {
                         field("guestPosition", "게스트 포지션")
                         field("status", "토론방 상태")
                         field("currentStage", "현재 진행 단계")
+                        field("winnerPosition", "최종 승자 포지션. 판결 전 또는 판결 실패 시 null").optional()
                         field("turnEndsAt", "현재 턴의 마감 시각. 시간 제한이 없는 단계에서는 null").optional()
                         field("turnTimeSeconds", "턴당 발언 제한 시간")
                         field("freeDebateTimeSeconds", "자유 토론 제한 시간")
@@ -231,6 +232,7 @@ class DebateControllerTest : RestDocsMvcTest() {
                         field("guestPosition", "게스트 포지션")
                         field("status", "토론방 상태")
                         field("currentStage", "현재 진행 단계")
+                        field("winnerPosition", "최종 승자 포지션. 판결 전 또는 판결 실패 시 null").optional()
                         field("turnEndsAt", "현재 턴의 마감 시각. 시간 제한이 없는 단계에서는 null").optional()
                         field("turnTimeSeconds", "턴당 발언 제한 시간")
                         field("freeDebateTimeSeconds", "자유 토론 제한 시간")
