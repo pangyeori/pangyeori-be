@@ -1,6 +1,7 @@
 package com.debate.pangyeori.debate.service
 
 import com.debate.pangyeori.common.dto.CursorPage
+import com.debate.pangyeori.debate.domain.Debate
 import com.debate.pangyeori.debate.domain.DebateFreeMessage
 import com.debate.pangyeori.debate.domain.enums.DebateStage
 import com.debate.pangyeori.debate.domain.enums.DebateStatus
@@ -116,6 +117,24 @@ class DebateFreeMessageService(
         val deadline = debate.currentStageEndsAt() ?: return
         if (LocalDateTime.now(ZoneOffset.UTC).isBefore(deadline)) return
 
+        advanceToFinalVerdict(debate = debate)
+        logger.info { "자유 토론 시간이 초과되어 최종 판결 단계로 넘어갔습니다. debateId=$debateId" }
+    }
+
+    @Transactional
+    fun endByAgreement(
+        debateId: String,
+    ) {
+        val debate = debateRepository.findWithLockById(id = debateId) ?: return
+        if (debate.currentStage != DebateStage.FREE) return
+
+        advanceToFinalVerdict(debate = debate)
+        logger.info { "양측 합의로 자유 토론을 조기 종료했습니다. debateId=$debateId" }
+    }
+
+    private fun advanceToFinalVerdict(
+        debate: Debate,
+    ) {
         debate.advanceStage(next = DebateStage.FINAL_VERDICT)
         eventPublisher.publishEvent(
             DebateStageChangedEvent(
@@ -124,7 +143,6 @@ class DebateFreeMessageService(
                 turnEndsAt = debate.currentStageEndsAt(),
             ),
         )
-        logger.info { "자유 토론 시간이 초과되어 최종 판결 단계로 넘어갔습니다. debateId=$debateId" }
     }
 
     companion object {

@@ -233,4 +233,34 @@ class DebateFreeMessageServiceTest : BehaviorSpec({
             }
         }
     }
+
+    Given("양측 합의로 자유 토론을 조기 종료하면") {
+        When("자유 토론 단계가 아니면") {
+            Then("아무것도 하지 않는다") {
+                val target = debate(stage = DebateStage.VERDICT_2)
+                every { debateRepository.findWithLockById(debateId) } returns target
+
+                service.endByAgreement(debateId = debateId)
+
+                target.currentStage shouldBe DebateStage.VERDICT_2
+                verify(exactly = 0) { eventPublisher.publishEvent(any<DebateStageChangedEvent>()) }
+            }
+        }
+
+        When("자유 토론 단계이면") {
+            Then("마감 시각과 무관하게 최종 판결 단계로 전환하고 이벤트를 발행한다") {
+                val target = debate(stage = DebateStage.FREE, currentStageStartedAt = now, freeDebateTimeSeconds = 600)
+                every { debateRepository.findWithLockById(debateId) } returns target
+
+                service.endByAgreement(debateId = debateId)
+
+                target.currentStage shouldBe DebateStage.FINAL_VERDICT
+                verify(exactly = 1) {
+                    eventPublisher.publishEvent(
+                        match<DebateStageChangedEvent> { it.stage == DebateStage.FINAL_VERDICT },
+                    )
+                }
+            }
+        }
+    }
 })

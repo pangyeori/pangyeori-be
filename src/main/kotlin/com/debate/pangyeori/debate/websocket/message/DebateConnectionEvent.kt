@@ -28,5 +28,10 @@ data class DebateConnectionEvent(
         STATEMENT_TIMED_OUT,
         VERDICT_ISSUED,
         FREE_MESSAGE_SENT,
+        EARLY_END_PROPOSED,
+        EARLY_END_ACCEPTED,
+        EARLY_END_DECLINED,
+        EARLY_END_CANCELLED,
+        EARLY_END_EXPIRED,
     }
 }
