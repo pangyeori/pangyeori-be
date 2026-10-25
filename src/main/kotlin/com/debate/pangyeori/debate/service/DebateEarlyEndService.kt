@@ -22,7 +22,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.Instant
+import java.time.ZoneOffset
 
 @Service
 class DebateEarlyEndService(
@@ -53,6 +53,7 @@ class DebateEarlyEndService(
         return DebateEarlyEndResponse(
             pending = proposal != null,
             proposerRole = proposal?.proposerRole,
+            expiresAt = proposal?.expiresAt,
         )
     }
 
@@ -69,24 +70,24 @@ class DebateEarlyEndService(
             userId = userId,
         ) ?: throw DebateAccessDeniedException()
 
-        val saved = debateEarlyEndRedisRepository.propose(
+        val expiresAt = debateEarlyEndRedisRepository.propose(
             debateId = debateId,
             proposerId = userId,
             proposerRole = member.role,
-        )
-        if (!saved) throw DebateEarlyEndAlreadyProposedException()
+        ) ?: throw DebateEarlyEndAlreadyProposedException()
 
         debateConnectionEventPublisher.publish(
             DebateConnectionEvent(
                 debateId = debateId,
                 type = DebateConnectionEvent.Type.EARLY_END_PROPOSED,
                 role = member.role,
+                expiresAt = expiresAt,
             ),
         )
 
         taskScheduler.schedule(
             { expireIfStillPending(debateId = debateId, proposerId = userId) },
-            Instant.now().plus(DebateEarlyEndRedisRepository.PROPOSAL_TTL),
+            expiresAt.toInstant(ZoneOffset.UTC),
         )
         logger.info { "조기 종료를 제안했습니다. debateId=$debateId" }
     }
