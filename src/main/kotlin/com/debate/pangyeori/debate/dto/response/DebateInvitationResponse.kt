@@ -10,6 +10,7 @@ data class DebateInvitationResponse(
     val title: String,
     val description: String?,
     val hostNickname: String,
+    val hostProfileImageKey: String?,
     val guestPosition: DebatePosition,
     val debateStatus: DebateStatus,
     val guestStatus: DebateUserStatus?,
