@@ -30,6 +30,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.springframework.scheduling.TaskScheduler
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.Optional
 
 class DebateEarlyEndServiceTest : BehaviorSpec({
@@ -57,6 +59,7 @@ class DebateEarlyEndServiceTest : BehaviorSpec({
     val hostId = "0000000000002"
     val guestId = "0000000000003"
     val hostEmail = "host@pangyeori.com"
+    val proposalExpiresAt = LocalDateTime.now(ZoneOffset.UTC).plusSeconds(30)
 
     beforeEach {
         clearMocks(
@@ -116,12 +119,13 @@ class DebateEarlyEndServiceTest : BehaviorSpec({
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns
                     member(DebateUserRole.HOST)
                 every { debateEarlyEndRedisRepository.find(debateId) } returns
-                    Proposal(proposerId = guestId, proposerRole = DebateUserRole.GUEST)
+                    Proposal(proposerId = guestId, proposerRole = DebateUserRole.GUEST, expiresAt = proposalExpiresAt)
 
                 val response = service.getStatus(debateId = debateId, userEmail = hostEmail)
 
                 response.pending shouldBe true
                 response.proposerRole shouldBe DebateUserRole.GUEST
+                response.expiresAt shouldBe proposalExpiresAt
             }
         }
 
@@ -137,6 +141,7 @@ class DebateEarlyEndServiceTest : BehaviorSpec({
 
                 response.pending shouldBe false
                 response.proposerRole shouldBe null
+                response.expiresAt shouldBe null
             }
         }
     }
@@ -168,7 +173,7 @@ class DebateEarlyEndServiceTest : BehaviorSpec({
                 every { debateRepository.findById(debateId) } returns Optional.of(debate())
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns
                     member(DebateUserRole.HOST)
-                every { debateEarlyEndRedisRepository.propose(debateId, hostId, DebateUserRole.HOST) } returns false
+                every { debateEarlyEndRedisRepository.propose(debateId, hostId, DebateUserRole.HOST) } returns null
 
                 shouldThrow<DebateEarlyEndAlreadyProposedException> {
                     service.propose(debateId = debateId, userId = hostId)
@@ -181,18 +186,23 @@ class DebateEarlyEndServiceTest : BehaviorSpec({
                 every { debateRepository.findById(debateId) } returns Optional.of(debate())
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns
                     member(DebateUserRole.HOST)
-                every { debateEarlyEndRedisRepository.propose(debateId, hostId, DebateUserRole.HOST) } returns true
+                every { debateEarlyEndRedisRepository.propose(debateId, hostId, DebateUserRole.HOST) } returns
+                    proposalExpiresAt
 
                 service.propose(debateId = debateId, userId = hostId)
 
                 verify(exactly = 1) {
                     debateConnectionEventPublisher.publish(
                         match<DebateConnectionEvent> {
-                            it.type == DebateConnectionEvent.Type.EARLY_END_PROPOSED && it.role == DebateUserRole.HOST
+                            it.type == DebateConnectionEvent.Type.EARLY_END_PROPOSED &&
+                                it.role == DebateUserRole.HOST &&
+                                it.expiresAt == proposalExpiresAt
                         },
                     )
                 }
-                verify(exactly = 1) { taskScheduler.schedule(any<Runnable>(), any<java.time.Instant>()) }
+                verify(exactly = 1) {
+                    taskScheduler.schedule(any<Runnable>(), proposalExpiresAt.toInstant(ZoneOffset.UTC))
+                }
             }
         }
     }
@@ -225,7 +235,7 @@ class DebateEarlyEndServiceTest : BehaviorSpec({
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns
                     member(DebateUserRole.HOST)
                 every { debateEarlyEndRedisRepository.find(debateId) } returns
-                    Proposal(proposerId = hostId, proposerRole = DebateUserRole.HOST)
+                    Proposal(proposerId = hostId, proposerRole = DebateUserRole.HOST, expiresAt = proposalExpiresAt)
 
                 shouldThrow<DebateEarlyEndSelfResponseNotAllowedException> {
                     service.accept(debateId = debateId, userId = hostId)
@@ -238,7 +248,7 @@ class DebateEarlyEndServiceTest : BehaviorSpec({
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, guestId) } returns
                     member(DebateUserRole.GUEST, guestId)
                 every { debateEarlyEndRedisRepository.find(debateId) } returns
-                    Proposal(proposerId = hostId, proposerRole = DebateUserRole.HOST)
+                    Proposal(proposerId = hostId, proposerRole = DebateUserRole.HOST, expiresAt = proposalExpiresAt)
 
                 service.accept(debateId = debateId, userId = guestId)
 
@@ -259,7 +269,7 @@ class DebateEarlyEndServiceTest : BehaviorSpec({
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, guestId) } returns
                     member(DebateUserRole.GUEST, guestId)
                 every { debateEarlyEndRedisRepository.find(debateId) } returns
-                    Proposal(proposerId = hostId, proposerRole = DebateUserRole.HOST)
+                    Proposal(proposerId = hostId, proposerRole = DebateUserRole.HOST, expiresAt = proposalExpiresAt)
 
                 service.decline(debateId = debateId, userId = guestId)
 
@@ -280,7 +290,7 @@ class DebateEarlyEndServiceTest : BehaviorSpec({
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, guestId) } returns
                     member(DebateUserRole.GUEST, guestId)
                 every { debateEarlyEndRedisRepository.find(debateId) } returns
-                    Proposal(proposerId = hostId, proposerRole = DebateUserRole.HOST)
+                    Proposal(proposerId = hostId, proposerRole = DebateUserRole.HOST, expiresAt = proposalExpiresAt)
 
                 shouldThrow<DebateAccessDeniedException> {
                     service.cancel(debateId = debateId, userId = guestId)
@@ -293,7 +303,7 @@ class DebateEarlyEndServiceTest : BehaviorSpec({
                 every { debateUserRepository.findByDebateIdAndUserId(debateId, hostId) } returns
                     member(DebateUserRole.HOST)
                 every { debateEarlyEndRedisRepository.find(debateId) } returns
-                    Proposal(proposerId = hostId, proposerRole = DebateUserRole.HOST)
+                    Proposal(proposerId = hostId, proposerRole = DebateUserRole.HOST, expiresAt = proposalExpiresAt)
 
                 service.cancel(debateId = debateId, userId = hostId)
 
