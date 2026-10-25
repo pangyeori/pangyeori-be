@@ -66,6 +66,7 @@ class DebateParticipationService(
             title = debate.title,
             description = debate.description,
             hostNickname = debate.host.nickname,
+            hostProfileImageKey = debate.host.profileImageKey,
             guestPosition = debate.hostPosition.opposite(),
             debateStatus = debate.status,
             guestStatus = guestStatus,
