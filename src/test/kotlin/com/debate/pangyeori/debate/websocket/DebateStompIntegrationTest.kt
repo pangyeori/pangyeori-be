@@ -103,6 +103,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.ENTERED
                     it.role shouldBe DebateUserRole.HOST
@@ -126,6 +127,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.ENTERED
                     it.role shouldBe DebateUserRole.GUEST
@@ -148,6 +150,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify { it.type shouldBe DebateConnectionEvent.Type.STARTED }
             }
             receive<DebateConnectionEvent>(
@@ -167,6 +170,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify { it.stage shouldBe DebateStage.OPENING_PROS }
             }
             receive<DebateConnectionEvent>(
@@ -193,6 +197,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.STATEMENT_SUBMITTED
                     it.role shouldBe DebateUserRole.HOST
@@ -216,6 +221,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify { it.stage shouldBe DebateStage.OPENING_CONS }
             }
             receive<DebateConnectionEvent>(
@@ -242,6 +248,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.STATEMENT_SUBMITTED
                     it.role shouldBe DebateUserRole.GUEST
@@ -265,6 +272,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify { it.stage shouldBe DebateStage.VERDICT_1 }
             }
             receive<DebateConnectionEvent>(
@@ -284,6 +292,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.VERDICT_ISSUED
                     it.verdictStatus shouldBe DebateVerdictStatus.SUCCESS
@@ -307,6 +316,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify { it.stage shouldBe DebateStage.REBUTTAL_PROS }
             }
             receive<DebateConnectionEvent>(
@@ -333,6 +343,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.STATEMENT_SUBMITTED
                     it.role shouldBe DebateUserRole.HOST
@@ -356,6 +367,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify { it.stage shouldBe DebateStage.REBUTTAL_CONS }
             }
             receive<DebateConnectionEvent>(
@@ -382,6 +394,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.STATEMENT_SUBMITTED
                     it.role shouldBe DebateUserRole.GUEST
@@ -405,6 +418,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify { it.stage shouldBe DebateStage.VERDICT_2 }
             }
             receive<DebateConnectionEvent>(
@@ -424,6 +438,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.VERDICT_ISSUED
                     it.stage shouldBe DebateStage.VERDICT_2
@@ -448,6 +463,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify { it.stage shouldBe DebateStage.FREE }
             }
             receive<DebateConnectionEvent>(
@@ -468,6 +484,7 @@ class DebateStompIntegrationTest : AsyncApiDocsTest() {
                 field("messageId", "자유 토론 메시지 전송 이벤트에서만 쓰는 메시지 ID").optional()
                 field("participantProsScore", "최종 판결 찬성 점수").optional()
                 field("participantConsScore", "최종 판결 반대 점수").optional()
+                field("expiresAt", "자유 토론 조기 종료 제안 이벤트에서만 쓰는 제안 만료 시각").optional()
                 verify {
                     it.type shouldBe DebateConnectionEvent.Type.LEFT
                     it.role shouldBe DebateUserRole.GUEST

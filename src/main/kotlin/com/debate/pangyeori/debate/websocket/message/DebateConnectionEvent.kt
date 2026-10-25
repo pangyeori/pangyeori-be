@@ -21,6 +21,7 @@ data class DebateConnectionEvent(
     val messageId: String? = null,
     val participantProsScore: BigDecimal? = null,
     val participantConsScore: BigDecimal? = null,
+    val expiresAt: LocalDateTime? = null,
 ) {
     enum class Type {
         ENTERED,

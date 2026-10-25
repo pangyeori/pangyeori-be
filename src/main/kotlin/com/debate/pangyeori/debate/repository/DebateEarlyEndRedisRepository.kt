@@ -4,6 +4,8 @@ import com.debate.pangyeori.debate.domain.enums.DebateUserRole
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Repository
 import java.time.Duration
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 @Repository
 class DebateEarlyEndRedisRepository(
@@ -13,11 +15,15 @@ class DebateEarlyEndRedisRepository(
         debateId: String,
         proposerId: String,
         proposerRole: DebateUserRole,
-    ): Boolean = redisTemplate.opsForValue().setIfAbsent(
-        key(debateId),
-        encode(proposerId, proposerRole),
-        PROPOSAL_TTL,
-    ) == true
+    ): LocalDateTime? {
+        val expiresAt = LocalDateTime.now(ZoneOffset.UTC).plus(PROPOSAL_TTL)
+        val saved = redisTemplate.opsForValue().setIfAbsent(
+            key(debateId),
+            encode(proposerId, proposerRole, expiresAt),
+            PROPOSAL_TTL,
+        ) == true
+        return if (saved) expiresAt else null
+    }
 
     fun find(
         debateId: String,
@@ -32,15 +38,17 @@ class DebateEarlyEndRedisRepository(
     private fun encode(
         proposerId: String,
         proposerRole: DebateUserRole,
-    ) = listOf(proposerId, proposerRole.code).joinToString(VALUE_SEPARATOR)
+        expiresAt: LocalDateTime,
+    ) = listOf(proposerId, proposerRole.code, expiresAt.toString()).joinToString(VALUE_SEPARATOR)
 
     private fun decode(
         value: String,
     ): Proposal {
-        val (proposerId, role) = value.split(VALUE_SEPARATOR, limit = 2)
+        val (proposerId, role, expiresAt) = value.split(VALUE_SEPARATOR, limit = 3)
         return Proposal(
             proposerId = proposerId,
             proposerRole = DebateUserRole.fromCode(role),
+            expiresAt = LocalDateTime.parse(expiresAt),
         )
     }
 
@@ -51,6 +59,7 @@ class DebateEarlyEndRedisRepository(
     data class Proposal(
         val proposerId: String,
         val proposerRole: DebateUserRole,
+        val expiresAt: LocalDateTime,
     )
 
     companion object {

@@ -140,6 +140,7 @@ class DebateEarlyEndControllerTest : RestDocsMvcTest() {
                     obj("data", "조기 종료 제안 상태") {
                         field("pending", "진행 중인 제안 존재 여부")
                         field("proposerRole", "제안자 역할 (HOST, GUEST). 진행 중인 제안이 없으면 null").optional()
+                        field("expiresAt", "제안 만료 시각. 진행 중인 제안이 없으면 null").optional()
                     }
                     field("error", "오류 정보").optional()
                 }
@@ -195,6 +196,7 @@ class DebateEarlyEndControllerTest : RestDocsMvcTest() {
                     obj("data", "조기 종료 제안 상태") {
                         field("pending", "진행 중인 제안 존재 여부")
                         field("proposerRole", "제안자 역할 (HOST, GUEST). 진행 중인 제안이 없으면 null").optional()
+                        field("expiresAt", "제안 만료 시각. 진행 중인 제안이 없으면 null").optional()
                     }
                     field("error", "오류 정보").optional()
                 }

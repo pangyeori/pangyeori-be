@@ -185,6 +185,7 @@ class DebateEarlyEndStompIntegrationTest : AsyncApiDocsTest() {
 
         val frame = awaitFrame(guestSubscriber.frames) { it.contains("EARLY_END_PROPOSED") }
         frame.contains("\"role\":\"HOST\"") shouldBe true
+        frame.contains("\"expiresAt\":null") shouldBe false
     }
 
     @Test
